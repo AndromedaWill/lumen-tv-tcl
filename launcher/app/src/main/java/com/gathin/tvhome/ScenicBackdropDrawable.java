@@ -1,55 +1,113 @@
 package com.gathin.tvhome;
 
+import android.animation.ValueAnimator;
 import android.app.Activity;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.ColorFilter;
-import android.graphics.Paint;
-import android.graphics.PixelFormat;
-import android.graphics.RectF;
+import android.graphics.*;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 
-/** One offline photo, decoded once off the UI thread. No renderer, timers or network. */
+/** Offline background plus Lumen-style lower veil. Decode, crop, tint and blur once off UI. */
 final class ScenicBackdropDrawable extends Drawable {
-    private final Bitmap photo;
-    private final Bitmap frost;
+    private final Bitmap photo, frost;
     private final Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
     private final RectF destination = new RectF();
-    private ScenicBackdropDrawable(Bitmap photo, Bitmap frost) {
-        this.photo = photo; this.frost = frost;
-        paint.setColorFilter(new android.graphics.PorterDuffColorFilter(0x50000000,
-                android.graphics.PorterDuff.Mode.SRC_ATOP));
-    }
+    private boolean lower;
+    private float blend;
+    private ValueAnimator transition;
+    private ScenicBackdropDrawable(Bitmap photo, Bitmap frost) { this.photo=photo; this.frost=frost; }
+
     static void load(Activity activity, View target) {
         new Thread(() -> {
             BitmapFactory.Options options = new BitmapFactory.Options();
-            // TV UI is often 960x540 dp; a background needs less detail than app artwork.
-            options.inSampleSize = 2;
-            Bitmap photo = BitmapFactory.decodeResource(activity.getResources(), R.drawable.hercules, options);
-            if (photo == null) return;
-            Bitmap frost = Bitmap.createScaledBitmap(photo, 96, 64, true);
+            options.inSampleSize=2;
+            Bitmap source = BitmapFactory.decodeResource(activity.getResources(), R.drawable.hercules, options);
+            if (source == null) return;
+            Bitmap photo = Bitmap.createBitmap(960,540,Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(photo);
+            Paint p = new Paint(Paint.FILTER_BITMAP_FLAG);
+            p.setColorFilter(new PorterDuffColorFilter(0x73000000,PorterDuff.Mode.SRC_ATOP));
+            float scale=Math.max(960f/source.getWidth(),540f/source.getHeight());
+            float w=source.getWidth()*scale,h=source.getHeight()*scale;
+            c.drawBitmap(source,null,new RectF((960-w)/2,(540-h)/2,(960+w)/2,(540+h)/2),p);
+            source.recycle();
+            p.setColorFilter(null);
+            p.setShader(new LinearGradient(0,0,0,540,new int[]{0x59000000,0,0,0x99000000},
+                    new float[]{0,.25f,.55f,1},Shader.TileMode.CLAMP));
+            c.drawRect(0,0,960,540,p);
+            Bitmap frost=Bitmap.createBitmap(160,90,Bitmap.Config.ARGB_8888);
+            Canvas f=new Canvas(frost);
+            f.drawBitmap(photo,null,new RectF(0,0,160,90),new Paint(Paint.FILTER_BITMAP_FLAG));
+            blur(frost);
+            f.drawColor(0x42000000); // Lumen lower-veil tint .26
             activity.runOnUiThread(() -> {
-                if (!activity.isFinishing() && !activity.isDestroyed())
-                    target.setBackground(new ScenicBackdropDrawable(photo, frost));
-                else { photo.recycle(); frost.recycle(); }
+                if (activity.isFinishing() || activity.isDestroyed()) { photo.recycle(); frost.recycle(); return; }
+                ScenicBackdropDrawable d=new ScenicBackdropDrawable(photo,frost);
+                target.setBackground(d);
+                d.setLower(Boolean.TRUE.equals(target.getTag(R.id.grid)),false);
             });
-        }, "home-photo-decode").start();
+        },"home-photo-prepare").start();
     }
-    /** Same photo alignment as the wallpaper, with a tiny cached image for the dock's frost. */
-    void drawFrost(Canvas canvas) {
-        canvas.drawBitmap(frost, null, destination, paint);
+    /** Separable box blur, two passes over only 160x90 pixels. Never runs during drawing. */
+    private static void blur(Bitmap image) {
+        int w=image.getWidth(),h=image.getHeight();
+        int[] a=new int[w*h],b=new int[w*h];
+        image.getPixels(a,0,w,0,0,w,h);
+        int radius=2, count=radius*2+1;
+        for (int pass=0;pass<2;pass++) {
+            for (int y=0;y<h;y++) {
+                int r=0,g=0,blue=0;
+                for(int k=-radius;k<=radius;k++){int v=a[y*w+Math.max(0,Math.min(w-1,k))];r+=(v>>16)&255;g+=(v>>8)&255;blue+=v&255;}
+                for(int x=0;x<w;x++) {
+                    b[y*w+x]=0xFF000000|((r/count)<<16)|((g/count)<<8)|(blue/count);
+                    int old=a[y*w+Math.max(0,x-radius)],next=a[y*w+Math.min(w-1,x+radius+1)];
+                    r+=((next>>16)&255)-((old>>16)&255);g+=((next>>8)&255)-((old>>8)&255);blue+=(next&255)-(old&255);
+                }
+            }
+            for (int x=0;x<w;x++) {
+                int r=0,g=0,blue=0;
+                for(int k=-radius;k<=radius;k++){int v=b[Math.max(0,Math.min(h-1,k))*w+x];r+=(v>>16)&255;g+=(v>>8)&255;blue+=v&255;}
+                for(int y=0;y<h;y++) {
+                    a[y*w+x]=0xFF000000|((r/count)<<16)|((g/count)<<8)|(blue/count);
+                    int old=b[Math.max(0,y-radius)*w+x],next=b[Math.min(h-1,y+radius+1)*w+x];
+                    r+=((next>>16)&255)-((old>>16)&255);g+=((next>>8)&255)-((old>>8)&255);blue+=(next&255)-(old&255);
+                }
+            }
+        }
+        image.setPixels(a,0,w,0,0,w,h);
     }
+    static void setLower(View root,boolean lower,boolean animate) {
+        if(root==null)return;
+        root.setTag(R.id.grid,lower);
+        if(root.getBackground() instanceof ScenicBackdropDrawable)
+            ((ScenicBackdropDrawable)root.getBackground()).setLower(lower,animate);
+    }
+    private void setLower(boolean value,boolean animate) {
+        if(lower==value && (transition!=null || blend==(value?1:0)))return;
+        lower=value;
+        if(transition!=null){transition.cancel();transition=null;}
+        float end=value?1:0;
+        if(!animate){blend=end;invalidateSelf();return;}
+        transition=ValueAnimator.ofFloat(blend,end);
+        transition.setDuration(280);
+        transition.addUpdateListener(a->{blend=(float)a.getAnimatedValue();invalidateSelf();});
+        transition.start();
+    }
+    static void stop(View root) {
+        if(root!=null && root.getBackground() instanceof ScenicBackdropDrawable) {
+            ScenicBackdropDrawable d=(ScenicBackdropDrawable)root.getBackground();
+            if(d.transition!=null){d.transition.cancel();d.transition=null;}
+            d.blend=d.lower?1:0;
+        }
+    }
+    void drawFrost(Canvas canvas) { paint.setAlpha(255);canvas.drawBitmap(frost,null,destination,paint); }
     @Override public void draw(Canvas canvas) {
-        float scale = Math.max(getBounds().width() / (float) photo.getWidth(),
-                getBounds().height() / (float) photo.getHeight());
-        float w = photo.getWidth() * scale, h = photo.getHeight() * scale;
-        float x = getBounds().centerX() - w / 2, y = getBounds().centerY() - h / 2;
-        destination.set(x, y, x + w, y + h);
-        canvas.drawBitmap(photo, null, destination, paint);
+        destination.set(getBounds());
+        paint.setAlpha(255);
+        if(blend>=1){canvas.drawBitmap(frost,null,destination,paint);return;}
+        canvas.drawBitmap(photo,null,destination,paint);
+        if(blend>0){paint.setAlpha(Math.round(255*blend));canvas.drawBitmap(frost,null,destination,paint);paint.setAlpha(255);}
     }
-    @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); invalidateSelf(); }
-    @Override public void setColorFilter(ColorFilter filter) { paint.setColorFilter(filter); invalidateSelf(); }
+    @Override public void setAlpha(int a) { }
+    @Override public void setColorFilter(ColorFilter f) { paint.setColorFilter(f);invalidateSelf(); }
     @Override public int getOpacity() { return PixelFormat.OPAQUE; }
 }

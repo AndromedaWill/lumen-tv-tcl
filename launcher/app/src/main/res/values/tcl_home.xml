@@ -1,4 +1,5 @@
 <resources>
+    <string name="all_applications">Todas las aplicaciones</string>
     <string name="hercules_credit" translatable="false">Amanhecer no Hercules\nCarlos Perez Couto · CC BY-SA 3.0</string>
     <string name="control_tv">Televisor</string>
     <string name="control_network">Red</string>

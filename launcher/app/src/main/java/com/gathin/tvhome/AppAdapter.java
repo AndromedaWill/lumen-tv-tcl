@@ -93,7 +93,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     static final float FOCUS_SCALE = TvFocusMotion.SCALE;
     /** Design size of a tile (dp); tiles shrink from here when the columns don't fit, see tileWidthPx. */
-    static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 101f;
+    static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 108f;
 
     /**
      * Tile width for a grid of this inner width: the cell minus room for the focus zoom and the glass
@@ -646,7 +646,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     /** Corner radius for a tile of this width: 22dp at the design width (16 before), proportionally less when smaller. */
     static float cornerRadius(int tileWidthPx, float density) {
-        return 22f * density * Math.min(1f, tileWidthPx / (DESIGN_W_DP * density));
+        return tileWidthPx * 34f / 240f;
     }
 
     static final class Holder extends RecyclerView.ViewHolder {
@@ -724,11 +724,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     // Same place as the full motion's slide ends: the layout's -6dp is only its starting point, and
                     // left there the name overlaps the zoomed tile.
                     // Only on focus: snapping it back to -6dp while it fades out would jump it up over the tile.
-                    if (focused) name.setTranslationY(dockLabel ? -density * 3f : density * 4f);
+                    if (focused) name.setTranslationY(dockLabel ? -density * 5f : density * 4f);
                 } else {
                     TvFocusMotion.apply(view, banner, glare, focused, density, dockEdge * TvFocusMotion.edgeShift(view));
                     name.animate().alpha(labelAlpha(focused))
-                            .translationY(focused ? (dockLabel ? -density * 3f : density * 4f) : -density * 6f)
+                            .translationY(focused ? (dockLabel ? -density * 5f : density * 4f) : -density * 6f)
                             .setDuration(220).start();
                 }
                 int pos = getBindingAdapterPosition();

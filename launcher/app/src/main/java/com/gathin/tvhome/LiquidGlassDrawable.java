@@ -50,7 +50,7 @@ public class LiquidGlassDrawable extends Drawable {
 
     @Override protected void onBoundsChange(Rect b) {
         sheen.setShader(new LinearGradient(b.left, b.top, b.right, b.bottom,
-                new int[]{0x28FFFFFF, 0x05FFFFFF, 0x00FFFFFF, 0x18000000},
+                new int[]{0x18FFFFFF, 0x04FFFFFF, 0x00FFFFFF, 0x18000000},
                 new float[]{0, .24f, .52f, 1}, Shader.TileMode.CLAMP));
         rim.setStyle(Paint.Style.STROKE);
         rim.setStrokeWidth(Math.max(1f, .65f * density));
@@ -64,7 +64,7 @@ public class LiquidGlassDrawable extends Drawable {
         if (b.isEmpty()) return;
         rect.set(b);
         float r = radiusDp < 0 ? rect.height() / 2f : Math.min(radiusDp * density, rect.height() / 2f);
-        canvas.drawRoundRect(rect, r, r, body);
+        if (body.getAlpha() > 0) canvas.drawRoundRect(rect, r, r, body);
         canvas.drawRoundRect(rect, r, r, sheen);
         float inset = rim.getStrokeWidth() / 2;
         rect.inset(inset, inset);

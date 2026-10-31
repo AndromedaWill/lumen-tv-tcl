@@ -69,5 +69,6 @@
         android:ellipsize="end"
         android:alpha="0"
         android:translationY="-6dp"
-        android:textAppearance="@style/TextAppearance.TV.LabelMedium" />
+        android:textAppearance="@style/TextAppearance.TV.LabelMedium"
+        android:textSize="9sp" />
 </FrameLayout>

@@ -469,6 +469,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // even when the theme requests an extra visible row below the dock.
             int shelfClearance = cfg.appLibrary ? hero.getMeasuredHeight() + (int) (40 * density) : 0;
             int want = Math.max(shelfClearance, h - dockRow - gridRows - (int) (AppAdapter.BOTTOM_ROOM_DP * density));
+            // Lumen six-app geometry: tile tops at 846/1080 of the viewport.
+            // Decoration + item padding contribute 14dp before the card itself.
+            if (MainActivity.this.dockRow && COLUMNS == 6 && rowsBelowDock == 0 && !cfg.dockTitle)
+                want = Math.round(h * 846f / 1080f - 14 * density);
             // Where the rows cannot fit even at the smallest tile (3 rows with the title on), the title keeps its
             // room above the dock and the last rows run off the bottom instead of the title drawing over the clock.
             if (MainActivity.this.dockRow && cfg.dockTitle && rowsBelowDock > 0) want = Math.max(want, (int) (AppAdapter.TITLE_ROOM_DP * density));
@@ -814,6 +818,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         homeVisible = false;
+        ScenicBackdropDrawable.stop(root);
         if (controlCenter != null) controlCenter.dismiss();
         focusStore.save(lastFocusedKey, lastFocused);
         endReorder();   // Home or another app while reordering keeps the order so far
@@ -1168,7 +1173,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /** The dock band's top edge once it is parked at the top of the screen, from the grid's top. */
-    private static final float DOCK_PARK_TOP_DP = 24f;
+    private static final float DOCK_PARK_TOP_DP = 38f;
     /** The dock's slide to the top (and back down, onTileFocused) is longer than a row scroll: it travels further. */
     private static final int PARK_MS = 480;
 
@@ -1181,7 +1186,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         RecyclerView.ViewHolder vh = rv.findViewHolderForAdapterPosition(0);
         if (!(vh instanceof AppAdapter.Holder)) return Integer.MIN_VALUE;
         View item = vh.itemView;
-        int bandTop = item.getTop() + ((AppAdapter.Holder) vh).card.getTop() - Math.round(24 * density);
+        int bandTop = item.getTop() + ((AppAdapter.Holder) vh).card.getTop() - Math.round(20 * density);
         return bandTop - Math.round(DOCK_PARK_TOP_DP * density);
     }
 
@@ -1224,6 +1229,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onTileFocused(int position, View card) {
+        if (header != null) header.setAlpha(!dockRow || position < COLUMNS ? 1f : 0f);
+        ScenicBackdropDrawable.setLower(root, dockRow && position >= COLUMNS, animations && !reducedMotion);
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
         if (aerial != null) aerial.setGridFocused(dockRow && position >= COLUMNS);

@@ -14,18 +14,20 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     private final int dockSize;
     private final float density;
     private final boolean libraryBelowFold;
-    private final LiquidGlassDrawable band;
+    private final LumenDockDrawable band;
     private final RectF rect = new RectF();
     private final Rect bounds = new Rect();
     private final android.graphics.Path glassClip = new android.graphics.Path();
+    private final android.graphics.Paint cachedPaint = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
+    private android.graphics.Bitmap cachedBand;
+    private android.graphics.drawable.Drawable cachedSource;
     private final int[] windowPosition = new int[2];
 
     DockDecoration(int dockSize, float density, boolean libraryBelowFold) {
         this.dockSize = dockSize;
         this.density = density;
         this.libraryBelowFold = libraryBelowFold;
-        // A quiet surface behind the icons, without luminous outlines or simulated thickness.
-        band = new ReflectiveSurfaceDrawable(28f, 0x48101620);
+        band = new LumenDockDrawable(density);
     }
 
     @Override
@@ -36,7 +38,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             outRect.top = (int) (6 * density);
             // A separate reveal gap, excluded from dock placement: the library must not leave clipped
             // fragments at the bottom of the resting Home screen. Down still scrolls to real rows.
-            outRect.bottom = (int) ((12 + (libraryBelowFold ? 28 : 0)) * density);
+            outRect.bottom = (int) ((libraryBelowFold ? 10 : 12) * density);
         }
     }
 
@@ -64,26 +66,26 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         if (!any) return;
         // The same margin on all four sides, so the gap above an icon matches the gap beside it. A focused end
         // icon shifts inward as it grows (TvFocusMotion.edgeShift), so it stays inside this margin too.
-        float pad = 24 * density;
-        rect.inset(-pad, -pad);
+        float pad = 20 * density;
+        rect.inset(-pad, -20 * density);
         View root = parent.getRootView().findViewById(R.id.root);
-        if (root != null && root.getBackground() instanceof ScenicBackdropDrawable) {
-            glassClip.reset();
-            glassClip.addRoundRect(rect, 28 * density, 28 * density, android.graphics.Path.Direction.CW);
-            int save = c.save();
-            c.clipPath(glassClip);
-            parent.getLocationInWindow(windowPosition);
-            c.translate(-windowPosition[0], -windowPosition[1]);
-            ((ScenicBackdropDrawable) root.getBackground()).drawFrost(c);
-            c.restoreToCount(save);
-        }
-        // Bounds at the origin, moved with the canvas: the band slides with every scroll frame, and
-        // onBoundsChange rebuilds the gradients, so only a size change may reset them.
+        android.graphics.drawable.Drawable source = root == null ? null : root.getBackground();
         bounds.set(0, 0, Math.round(rect.width()), Math.round(rect.height()));
-        if (!bounds.equals(band.getBounds())) band.setBounds(bounds);
-        c.save();
-        c.translate(rect.left, rect.top);
-        band.draw(c);
-        c.restore();
+        if (cachedBand == null || cachedBand.getWidth() != bounds.width()
+                || cachedBand.getHeight() != bounds.height() || cachedSource != source) {
+            // Rasterize once per layout/background, rather than stencil, sample and shade on every
+            // animation frame. The translucent material travels with the dock while scrolling.
+            cachedBand = android.graphics.Bitmap.createBitmap(bounds.width(), bounds.height(),
+                    android.graphics.Bitmap.Config.ARGB_8888);
+            Canvas layer = new Canvas(cachedBand);
+            glassClip.reset();
+            glassClip.addRoundRect(0, 0, bounds.width(), bounds.height(), 37 * density, 37 * density,
+                    android.graphics.Path.Direction.CW);
+            layer.clipPath(glassClip);
+            band.setBounds(bounds);
+            band.draw(layer);
+            cachedSource = source;
+        }
+        c.drawBitmap(cachedBand, rect.left, rect.top, cachedPaint);
     }
 }

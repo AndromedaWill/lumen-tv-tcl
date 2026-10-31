@@ -30,7 +30,7 @@ final class TvFocusMotion {
 
     /** Restrained TV focus, with layout space still reserved for overshoot. */
     static final float SCALE = 1.12f;
-    private static final float LIFT_DP = 6f;
+    private static final float LIFT_DP = 3.75f;
     private static final float ELEVATION_DP = 10f;
     private static final float TILT_DEG = 4f;
     private static final long FOCUS_MS = 220;
