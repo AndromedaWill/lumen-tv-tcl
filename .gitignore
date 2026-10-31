@@ -16,3 +16,7 @@ launcher/hs_err_pid*.log
 launcher/replay_pid*.log
 .dev/
 artifacts/
+tools/fixtures/.gradle/
+tools/fixtures/app/build/
+tools/fixtures/build/
+tools/fixtures/local.properties

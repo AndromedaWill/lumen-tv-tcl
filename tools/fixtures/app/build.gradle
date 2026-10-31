@@ -1,0 +1,18 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'pe.tclhome.fixture'
+    compileSdk 34
+    defaultConfig { applicationId 'pe.tclhome.fixture'; minSdk 26; targetSdk 34; versionCode 1; versionName '1.0' }
+    flavorDimensions 'content'
+    productFlavors {
+        cinema { dimension 'content'; applicationIdSuffix '.cinema'; resValue 'string', 'app_name', 'Cine' }
+        music { dimension 'content'; applicationIdSuffix '.music'; resValue 'string', 'app_name', 'Música' }
+        photos { dimension 'content'; applicationIdSuffix '.photos'; resValue 'string', 'app_name', 'Fotos' }
+        games { dimension 'content'; applicationIdSuffix '.games'; resValue 'string', 'app_name', 'Juegos' }
+        files { dimension 'content'; applicationIdSuffix '.files'; resValue 'string', 'app_name', 'Archivos' }
+        live { dimension 'content'; applicationIdSuffix '.live'; resValue 'string', 'app_name', 'En directo' }
+        radio { dimension 'content'; applicationIdSuffix '.radio'; resValue 'string', 'app_name', 'Radio' }
+        library { dimension 'content'; applicationIdSuffix '.library'; resValue 'string', 'app_name', 'Colección' }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
