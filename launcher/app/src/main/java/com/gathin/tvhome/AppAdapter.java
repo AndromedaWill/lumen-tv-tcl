@@ -105,7 +105,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         int cell = innerWidthPx / columns;
         // A focused tile grows by half its zoom into the gap on each side, so the gap needs room for that half
         // (plus 12dp to spare), not for the whole zoom: the tiles come out about 9% larger than before.
-        int fit = (int) ((cell - 12 * density) / (1f + (FOCUS_SCALE - 1f) / 2f));
+        // Preserve the original layout envelope when reducing motion amplitude. Otherwise a calmer
+        // focus would enlarge tiles and push existing four-row/compact layouts off screen.
+        int fit = (int) ((cell - 12 * density) / (1f + (Math.max(1.18f, FOCUS_SCALE) - 1f) / 2f));
         return Math.max(Math.round(80 * density), Math.min(design, fit));
     }
 
@@ -136,7 +138,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** DockDecoration's offsets above and below the dock row. */
     static final float DOCK_EXTRA_DP = 6 + 12;
     /** Room kept under the last row rows_below_dock asks for (MainActivity places the dock with the same). */
-    static final float BOTTOM_ROOM_DP = 18;   // 30 before: the dock sits 12dp lower
+    static final float BOTTOM_ROOM_DP = 18;
     /** Room kept above the dock for the dock title (48sp hero name plus its 40dp gap) when dock_title is on. */
     static final float TITLE_ROOM_DP = 104;
     /** dock_row false: room above the first row for its zoom and glass (MainActivity places the grid with it). */
@@ -374,7 +376,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         View name = v.findViewById(R.id.name);
         ViewGroup.MarginLayoutParams nameLp = (ViewGroup.MarginLayoutParams) name.getLayoutParams();
         nameLp.width = w;
-        nameLp.topMargin = h + Math.round((dockRow ? 7 : 4) * density);
+        nameLp.topMargin = h + Math.round(4 * density);
         if (!dockRow) {
             // Compact spacing (COMPACT_ITEM_EXTRA_DP): 4dp item padding and a 20dp name instead of 8dp and 22dp.
             nameLp.height = Math.round(20 * density);
@@ -403,8 +405,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
+        h.card.setContentDescription(e.name);
         h.name.setText(e.name);
-        h.name.setVisibility(dockRow && position < dockSize ? View.INVISIBLE : View.VISIBLE);   // the dock has no labels
+        h.dockLabel = dockRow && position < dockSize;
+        h.name.setVisibility(View.VISIBLE); // Lumen-inspired: the focused dock app has its name below it.
         h.dockEdge = !dockRow || position >= dockSize ? 0 : position == 0 ? 1 : position == dockSize - 1 ? -1 : 0;
         if (rtlAppGrid) h.dockEdge = -h.dockEdge;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
@@ -413,8 +417,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             TvFocusMotion.set(h.card, h.banner, h.glare, focused, ctx.getResources().getDisplayMetrics().density,
                     h.dockEdge * TvFocusMotion.edgeShift(h.card));
         } else {
-            h.card.setScaleX(focused && animations ? focusScale() : 1f);
-            h.card.setScaleY(focused && animations ? focusScale() : 1f);
+            h.card.setScaleX(focused ? focusScale() : 1f);
+            h.card.setScaleY(focused ? focusScale() : 1f);
             h.card.setTranslationY(focused && advancedEffects ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
             h.card.setTranslationZ(focused && advancedEffects ? 8f * ctx.getResources().getDisplayMetrics().density : 0f);
             h.banner.setScaleX(focused && advancedEffects ? 1.035f : 1f);
@@ -584,7 +588,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     float focusScale() {
-        return !animations ? 1f : reducedMotion ? (advancedEffects ? 1.12f : 1.10f) : TvFocusMotion.SCALE;
+        return !animations ? 1.06f : reducedMotion ? (advancedEffects ? 1.12f : 1.10f) : TvFocusMotion.SCALE;
     }
 
     /** A vivid colour sampled from the app's banner (or icon), cached per entry; a card's accent when it set one. */
@@ -658,6 +662,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         /** +1 for the dock's first icon, -1 for its last (flipped on a right-to-left grid), 0 elsewhere: the way it
          *  shifts as it grows, so it stays inside the dock band (TvFocusMotion.edgeShift). Set on every bind. */
         int dockEdge;
+        boolean dockLabel;
 
         Holder(View v, TileListener listener, boolean animations, boolean advancedEffects,
                boolean reducedMotion) {
@@ -681,6 +686,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
             });
             card.setClipToOutline(true);
+            // Static light across the artwork, clipped by the tile's own outline. No outer halo.
+            card.setForeground(new ReflectiveSurfaceDrawable(0, 0x00000000));
 
             card.setOnKeyListener((view, keyCode, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
@@ -697,8 +704,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 float scale = !animations ? 1f : advancedEffects ? 1.12f : 1.10f;
                 float s = focused ? scale : 1f;
                 if (!animations) {
-                    view.setScaleX(1f);
-                    view.setScaleY(1f);
+                    // With animations disabled the focus remains distinct, changing size immediately.
+                    view.setScaleX(focused ? 1.06f : 1f);
+                    view.setScaleY(focused ? 1.06f : 1f);
                     view.setTranslationY(0f);
                     view.setTranslationZ(0f);
                     banner.setScaleX(1f);
@@ -716,11 +724,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     // Same place as the full motion's slide ends: the layout's -6dp is only its starting point, and
                     // left there the name overlaps the zoomed tile.
                     // Only on focus: snapping it back to -6dp while it fades out would jump it up over the tile.
-                    if (focused) name.setTranslationY(density * 4f);
+                    if (focused) name.setTranslationY(dockLabel ? -density * 3f : density * 4f);
                 } else {
                     TvFocusMotion.apply(view, banner, glare, focused, density, dockEdge * TvFocusMotion.edgeShift(view));
                     name.animate().alpha(labelAlpha(focused))
-                            .translationY(focused ? density * 4f : -density * 6f)
+                            .translationY(focused ? (dockLabel ? -density * 3f : density * 4f) : -density * 6f)
                             .setDuration(220).start();
                 }
                 int pos = getBindingAdapterPosition();

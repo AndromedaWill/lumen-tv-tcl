@@ -28,15 +28,15 @@ import android.view.animation.PathInterpolator;
 final class TvFocusMotion {
     private TvFocusMotion() { }
 
-    /** tvOS scales a focused icon about 15-20%. */
-    static final float SCALE = 1.18f;
+    /** Restrained TV focus, with layout space still reserved for overshoot. */
+    static final float SCALE = 1.12f;
     private static final float LIFT_DP = 6f;
-    private static final float ELEVATION_DP = 18f;
-    private static final float TILT_DEG = 10f;
-    private static final long FOCUS_MS = 280;
+    private static final float ELEVATION_DP = 10f;
+    private static final float TILT_DEG = 4f;
+    private static final long FOCUS_MS = 220;
     private static final long UNFOCUS_MS = 200;
-    private static final long TILT_MS = 620;
-    private static final float SHINE_ALPHA = 0.85f;
+    private static final long TILT_MS = 360;
+    private static final float SHINE_ALPHA = 0.12f;
 
     private static final Interpolator FOCUS_EASE = new PathInterpolator(0.25f, 1f, 0.5f, 1f);
     private static final Interpolator UNFOCUS_EASE = new DecelerateInterpolator(1.5f);
@@ -114,9 +114,9 @@ final class TvFocusMotion {
     }
 
     /** The round top-bar buttons scale less than an icon: they sit 10dp apart. */
-    private static final float BUTTON_SCALE = 1.15f;
+    private static final float BUTTON_SCALE = 1.08f;
     private static final float BUTTON_LIFT_DP = 3f;
-    private static final float BUTTON_ELEVATION_DP = 10f;
+    private static final float BUTTON_ELEVATION_DP = 5f;
 
     /**
      * The same focus motion for a round top-bar button: scale, lift onto a shadow, the lean and settle, and
@@ -160,7 +160,7 @@ final class TvFocusMotion {
             a = ObjectAnimator.ofPropertyValuesHolder(shine,
                     PropertyValuesHolder.ofFloat(ShineDrawable.SHINE_X, 0f),
                     PropertyValuesHolder.ofFloat(ShineDrawable.SHINE_Y, -h * 0.22f),
-                    PropertyValuesHolder.ofInt(ShineDrawable.ALPHA, Math.max(shine.getAlpha(), 128),
+                    PropertyValuesHolder.ofInt(ShineDrawable.ALPHA, shine.getAlpha(),
                             Math.round(255 * SHINE_ALPHA)));
             a.setDuration(TILT_MS);
             a.setInterpolator(SETTLE_EASE);
@@ -220,7 +220,7 @@ final class TvFocusMotion {
         // Move the bloom's centre, never the view: a moved view would cut the light off at its edge.
         s.setShineX(dx * w * 0.35f);
         s.setShineY(dy == 0f ? -h * 0.22f : dy * h * 0.35f);
-        glare.setAlpha(Math.max(glare.getAlpha(), 0.5f));
+        glare.setAlpha(Math.min(glare.getAlpha(), SHINE_ALPHA));
         glare.animate().alpha(SHINE_ALPHA).setDuration(TILT_MS).setInterpolator(SETTLE_EASE).start();
         ObjectAnimator a = ObjectAnimator.ofPropertyValuesHolder(s,
                 PropertyValuesHolder.ofFloat(ShineView.SHINE_X, 0f),

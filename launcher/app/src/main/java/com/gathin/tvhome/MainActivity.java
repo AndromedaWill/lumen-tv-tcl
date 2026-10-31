@@ -90,6 +90,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
+    static final String ACTION_INPUTS = "com.gathin.tvhome.action.INPUTS";
     static final String ACTION_LAUNCHER_SETTINGS = "com.gathin.tvhome.action.LAUNCHER_SETTINGS";
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
     static int COLUMNS = 4;
@@ -103,6 +104,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private String sourcePanelAction;
 
     private AppAdapter adapter;
+    private HomeFocusStore focusStore;
+    private boolean homeVisible;
     private RecyclerView grid;
     private FrameLayout root;
     private WallpaperPlayer wallpaperPlayer;
@@ -120,6 +123,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private int headerScroll;
     private View ambient;
     private TextView heroName;
+    private ControlCenterDialog controlCenter;
     /** The top shelf: heroName, plus the cinematic shelf's "Last opened" line and dock position dots. */
     private View hero;
     private TextView heroMeta;
@@ -282,6 +286,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        focusStore = new HomeFocusStore(this);
+        lastFocusedKey = focusStore.key();
+        lastFocused = focusStore.position();
         setContentView(R.layout.activity_main);
         density = getResources().getDisplayMetrics().density;
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
@@ -302,7 +309,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sourcePanelAction = cfg.sourcePanelAction;
 
         root = findViewById(R.id.root);
-        root.setBackgroundColor(cfg.backgroundColor);
+        boolean originalLandscape = cfg.wallpapers.isEmpty();
+        if (originalLandscape) {
+            root.setBackground(new HorizonDrawable());
+            ScenicBackdropDrawable.load(this, root);
+        }
+        else root.setBackgroundColor(cfg.backgroundColor);
+        View credit = findViewById(R.id.backdropCredit);
+        if (credit != null) credit.setVisibility(originalLandscape ? View.VISIBLE : View.GONE);
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
         sky = findViewById(R.id.sky);
         // Above the wallpaper (it stays as the picture when the video is missing), below everything else.
@@ -321,7 +335,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // a fade renders it into a full-screen offscreen buffer first.
         ambient.forceHasOverlappingRendering(false);
         // Over an aerial the coloured glow only tints the film; tvOS has none.
-        if (aerial != null) ambient.setVisibility(View.GONE);
+        if (aerial != null || originalLandscape) ambient.setVisibility(View.GONE);
         heroName = findViewById(R.id.heroName);
         hero = findViewById(R.id.hero);
         // The hero is now a group (name, and the cinematic lines): without this every fade of the default
@@ -427,7 +441,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewDetachedFromWindow(@NonNull View v) {
             }
         });
-        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic));
+        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cfg.rowsBelowDock == 0));
         if (animations) {
             int enterAnim = reducedMotion ? R.anim.tile_enter_reduced : R.anim.tile_enter;
             float enterDelay = reducedMotion ? 0f : 0.06f;
@@ -571,7 +585,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     : btnReorder.getVisibility() == View.VISIBLE ? R.id.btnReorder : firstButton;
             int leftButton = rtlMenuBar ? R.id.btnSettings : leftOfBar;
             // The clock capsule ends the row on the right where the layout has one (not the Hebrew header).
-            int rightButton = rtlMenuBar ? firstButton : clockBlock != null && clockBlock.getVisibility() == View.VISIBLE ? R.id.clockBlock : R.id.btnSettings;
+            int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
+            // The clock lives at the left edge in the Lumen layout.
+            if (!rtlMenuBar && clockBlock != null && clockBlock.getVisibility() == View.VISIBLE) {
+                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && v.getId() == leftOfBar) {
+                    clockBlock.requestFocus(); return true;
+                }
+                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v == clockBlock) {
+                    findViewById(leftOfBar).requestFocus(); return true;
+                }
+                leftButton = R.id.clockBlock;
+            }
             boolean end = keyCode == KeyEvent.KEYCODE_DPAD_LEFT ? v.getId() == leftButton
                     : keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
             // Nowhere to go: the same nudge an app icon gives at the end of its row.
@@ -631,6 +655,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private boolean openLauncherSettingsIfAsked(Intent intent) {
+        if (intent != null && ACTION_INPUTS.equals(intent.getAction())) {
+            setIntent(new Intent(Intent.ACTION_MAIN));
+            root.post(this::showInputs);
+            return true;
+        }
         if (intent == null || !ACTION_LAUNCHER_SETTINGS.equals(intent.getAction())) return false;
         setIntent(new Intent(Intent.ACTION_MAIN));
         startActivityForResult(new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST);
@@ -647,6 +676,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onNewIntent(intent);
         if (openLauncherSettingsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
+        // Home from an app restores its tile; a second Home while already here returns to the dock.
+        if (!homeVisible) return;
         grid.scrollToPosition(0);
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
@@ -666,6 +697,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        homeVisible = true;
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -781,6 +813,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onPause() {
         super.onPause();
+        homeVisible = false;
+        if (controlCenter != null) controlCenter.dismiss();
+        focusStore.save(lastFocusedKey, lastFocused);
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
         if (aerial != null) aerial.pause();   // frees the video decoder for the app being opened
@@ -1117,14 +1152,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onBackPressed() {
-        // Home screen: Back starts the screensaver. Apps can't ask the dream manager themselves (WRITE_DREAM_STATE
-        // is a system permission); SystemUI's Somnambulator can, and does so when started.
-        try {
-            startActivity(new Intent(Intent.ACTION_MAIN)
-                    .setClassName("com.android.systemui", "com.android.systemui.Somnambulator"));
-        } catch (ActivityNotFoundException | SecurityException e) {
-            android.util.Log.w("TvHome", "no screensaver starter on this TV", e);
-        }
+        // Back is navigation, never a privileged SystemUI/sleep action.
+        focusTile(Math.max(0, lastFocused % COLUMNS));
     }
 
     /**
@@ -1169,6 +1198,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Past its bottom edge plus room for a focused pill's glow, it is out of sight: stop moving it.
         float away = header.getBottom() + 16 * density;
         header.setTranslationY(-Math.min(headerScroll, away));
+        View credit = findViewById(R.id.backdropCredit);
+        if (credit != null) credit.setAlpha(headerScroll == 0
+                && (controlCenter == null || !controlCenter.isShowing()) ? 1f : 0f);
     }
 
     // ---- glass highlight -------------------------------------------------------------------------
@@ -2139,12 +2171,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * On firmware with a standard settings handler the behaviour is unchanged.
      */
     private Intent systemIntent(String standardAction) {
-        Intent i = new Intent(standardAction);
-        if (i.resolveActivity(getPackageManager()) != null) return i;
-        i = new Intent().setComponent(new ComponentName(
-                "com.xiaomi.mitv.settings", "com.xiaomi.mitv.settings.entry.MainActivity"));
-        if (i.resolveActivity(getPackageManager()) != null) return i;
-        return new Intent(standardAction);   // nothing found: let open() show the can't-open toast
+        return SystemSettings.intent(this, standardAction);
     }
 
     /** Hides the Inputs pill when it would have nothing to list: streaming boxes have no HDMI-in, AV or tuner. */
@@ -2193,7 +2220,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             startActivity(i);
-        } catch (ActivityNotFoundException e) {
+        } catch (ActivityNotFoundException | SecurityException e) {
             Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
         }
     }
@@ -2512,7 +2539,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean reorderButtonEnabled = true;
 
     private boolean topShown(String key) {
-        return getSharedPreferences(TOP_PREFS, MODE_PRIVATE).getBoolean(key, true);
+        return getSharedPreferences(TOP_PREFS, MODE_PRIVATE).getBoolean(key, !TOP_SOUND.equals(key));
     }
 
     /** Shows or hides the optional top buttons from the saved choices (Inputs also needs an input to offer). */
@@ -2674,6 +2701,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Drop in: fade and unfold from the top edge, hanging under the anchor pill. */
     private void dropIn(PopupWindow popup, View panel, View anchor, int gravity) {
+        if (!animations || reducedMotion) {
+            popup.showAsDropDown(anchor, 0, (int) (10 * density), gravity);
+            return;
+        }
         panel.setAlpha(0f);
         panel.setPivotY(0f);
         panel.setScaleY(0.92f);
@@ -2721,6 +2752,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Keep a normal Settings click for the TV; the launcher's choices live behind hold OK. */
     private void showSettingsMenu() {
+        if (controlCenter != null && controlCenter.isShowing()) return;
+        controlCenter = new ControlCenterDialog(this, this::showInputs, this::showLauncherMenu,
+                animations && !reducedMotion);
+        View credit = findViewById(R.id.backdropCredit);
+        if (credit != null) credit.setAlpha(0);
+        controlCenter.setOnDismissListener(d -> {
+            findViewById(R.id.btnSettings).requestFocus();
+            if (credit != null) credit.setAlpha(headerScroll == 0 ? 1 : 0);
+        });
+        controlCenter.show();
+    }
+
+    private void showLauncherMenu() {
         View anchor = findViewById(R.id.btnSettings);
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);

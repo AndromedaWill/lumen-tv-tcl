@@ -1,0 +1,24 @@
+<resources>
+    <string name="hercules_credit" translatable="false">Amanhecer no Hercules\nCarlos Perez Couto · CC BY-SA 3.0</string>
+    <string name="control_tv">Televisor</string>
+    <string name="control_network">Red</string>
+    <string name="control_picture">Imagen</string>
+    <string name="control_apps">Aplicaciones</string>
+    <string name="control_center">Centro de control</string>
+    <string name="control_center_hint">TCL Home · Accesos rápidos</string>
+    <string name="control_native">Ajustes del televisor</string>
+    <string name="control_open">Abrir ajustes</string>
+    <string name="control_sound">Sonido</string>
+    <string name="control_bluetooth">Bluetooth</string>
+    <string name="control_inputs">Entradas</string>
+    <string name="control_sources">HDMI y TV</string>
+    <string name="control_home">Inicio</string>
+    <string name="control_customize">Personalizar</string>
+    <string name="home_surface_title">Inicio</string>
+    <string name="prototype_name" translatable="false">TCL Home · Prueba</string>
+    <string-array name="settings_fallback_components" translatable="false">
+        <item>com.tcl.settings/com.tcl.settings.ui.MainActivity</item>
+        <item>com.xiaomi.mitv.settings/com.xiaomi.mitv.settings.entry.MainActivity</item>
+        <item>com.android.tv.settings/com.android.tv.settings.MainSettings</item>
+    </string-array>
+</resources>

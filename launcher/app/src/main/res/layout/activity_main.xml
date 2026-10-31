@@ -108,7 +108,7 @@
         android:id="@+id/hero"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="68dp"
+        android:layout_marginStart="74dp"
         android:orientation="vertical"
         android:alpha="0">
 
@@ -117,7 +117,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#FFFFFFFF"
-            android:textSize="48sp"
+            android:textSize="30sp"
             android:fontFamily="@font/inter_display_light"
             android:letterSpacing="-0.02"
             android:includeFontPadding="false"
@@ -152,8 +152,8 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingStart="32dp"
-        android:paddingEnd="32dp"
+        android:paddingStart="64dp"
+        android:paddingEnd="64dp"
         android:clipChildren="false"
         android:clipToPadding="false">
 
@@ -166,6 +166,62 @@
             android:layout_marginTop="26dp"
             android:clipChildren="false"
             android:clipToPadding="false">
+
+                <LinearLayout
+                    android:id="@+id/clockBlock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="64dp"
+                    android:layout_alignParentStart="true"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp"
+                    android:background="@drawable/clock_focus_bg"
+                    android:focusable="true"
+                    android:clickable="true"
+                    android:contentDescription="@string/clock_panel"
+                    android:nextFocusDown="@+id/grid"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:baselineAligned="true">
+
+                    <TextClock
+                        android:id="@+id/clock"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:format12Hour="h:mm"
+                        android:format24Hour="HH:mm"
+                        android:textAppearance="@style/TextAppearance.TV.HeadlineMedium"
+                        android:textSize="40sp"
+                        android:textColor="@drawable/pill_text"
+                        android:duplicateParentState="true"
+                        android:includeFontPadding="false" />
+
+                    <!-- AM/PM, the same size as the time, on its baseline; empty on a 24-hour clock. -->
+                    <TextClock
+                        android:id="@+id/ampm"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:format12Hour="a"
+                        android:format24Hour=""
+                        android:textAppearance="@style/TextAppearance.TV.HeadlineMedium"
+                        android:textSize="40sp"
+                        android:textColor="@drawable/pill_text_ampm"
+                        android:duplicateParentState="true"
+                        android:letterSpacing="0.02"
+                        android:textAllCaps="true"
+                        android:includeFontPadding="false" />
+                </LinearLayout>
+
+            <TextClock
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/clockBlock"
+                android:format12Hour="EEEE d MMMM"
+                android:format24Hour="EEEE d MMMM"
+                android:textColor="#E6FFFFFF"
+                android:textSize="13sp"
+                android:fontFamily="@font/inter_regular"
+                android:focusable="false" />
 
             <!-- Left: the Wi-Fi pill, on TVs that show it (this one hides it). -->
             <LinearLayout
@@ -235,48 +291,7 @@
 
                 <!-- Focusable like the round buttons: pill_bg turns it white, the texts turn dark with it
                      (duplicateParentState), and OK opens the clock panel. -->
-                <LinearLayout
-                    android:id="@+id/clockBlock"
-                    android:layout_width="wrap_content"
-                    android:layout_height="42dp"
-                    android:layout_marginStart="10dp"
-                    android:paddingStart="18dp"
-                    android:paddingEnd="18dp"
-                    android:background="@drawable/pill_bg"
-                    android:focusable="true"
-                    android:clickable="true"
-                    android:contentDescription="@string/clock_panel"
-                    android:nextFocusDown="@+id/grid"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:baselineAligned="true">
 
-                    <TextClock
-                        android:id="@+id/clock"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:format12Hour="h:mm"
-                        android:format24Hour="HH:mm"
-                        android:textAppearance="@style/TextAppearance.TV.HeadlineMedium"
-                        android:textColor="@drawable/pill_text"
-                        android:duplicateParentState="true"
-                        android:includeFontPadding="false" />
-
-                    <!-- AM/PM, the same size as the time, on its baseline; empty on a 24-hour clock. -->
-                    <TextClock
-                        android:id="@+id/ampm"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="5dp"
-                        android:format12Hour="a"
-                        android:format24Hour=""
-                        android:textAppearance="@style/TextAppearance.TV.HeadlineMedium"
-                        android:textColor="@drawable/pill_text_ampm"
-                        android:duplicateParentState="true"
-                        android:letterSpacing="0.02"
-                        android:textAllCaps="true"
-                        android:includeFontPadding="false" />
-                </LinearLayout>
             </LinearLayout>
 
             <!-- The old greeting and date header. tvOS 26 has none, so it stays hidden; the views remain
@@ -364,4 +379,17 @@
         android:layout_height="10dp"
         android:alpha="0"
         android:importantForAccessibility="no" />
+    <TextView
+        android:id="@+id/backdropCredit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="64dp"
+        android:layout_marginBottom="160dp"
+        android:text="@string/hercules_credit"
+        android:textColor="#DFFFFFFF"
+        android:textSize="10sp"
+        android:gravity="end"
+        android:fontFamily="@font/inter_regular"
+        android:focusable="false" />
 </FrameLayout>

@@ -13,16 +13,19 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
 
     private final int dockSize;
     private final float density;
+    private final boolean libraryBelowFold;
     private final LiquidGlassDrawable band;
     private final RectF rect = new RectF();
     private final Rect bounds = new Rect();
+    private final android.graphics.Path glassClip = new android.graphics.Path();
+    private final int[] windowPosition = new int[2];
 
-    /** @param translucent unused since the band became glass; kept for the cinematic shelf's call. */
-    DockDecoration(int dockSize, float density, boolean translucent) {
+    DockDecoration(int dockSize, float density, boolean libraryBelowFold) {
         this.dockSize = dockSize;
         this.density = density;
-        // Lighter than the pills: a big slab of glass over the aerial, 28dp corners like the tvOS dock.
-        band = new LiquidGlassDrawable(28f, 0x24FFFFFF);
+        this.libraryBelowFold = libraryBelowFold;
+        // A quiet surface behind the icons, without luminous outlines or simulated thickness.
+        band = new ReflectiveSurfaceDrawable(28f, 0x48101620);
     }
 
     @Override
@@ -31,7 +34,9 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         int pos = parent.getChildAdapterPosition(view);
         if (pos >= 0 && pos < dockSize) {
             outRect.top = (int) (6 * density);
-            outRect.bottom = (int) (12 * density);
+            // A separate reveal gap, excluded from dock placement: the library must not leave clipped
+            // fragments at the bottom of the resting Home screen. Down still scrolls to real rows.
+            outRect.bottom = (int) ((12 + (libraryBelowFold ? 28 : 0)) * density);
         }
     }
 
@@ -61,6 +66,17 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         // icon shifts inward as it grows (TvFocusMotion.edgeShift), so it stays inside this margin too.
         float pad = 24 * density;
         rect.inset(-pad, -pad);
+        View root = parent.getRootView().findViewById(R.id.root);
+        if (root != null && root.getBackground() instanceof ScenicBackdropDrawable) {
+            glassClip.reset();
+            glassClip.addRoundRect(rect, 28 * density, 28 * density, android.graphics.Path.Direction.CW);
+            int save = c.save();
+            c.clipPath(glassClip);
+            parent.getLocationInWindow(windowPosition);
+            c.translate(-windowPosition[0], -windowPosition[1]);
+            ((ScenicBackdropDrawable) root.getBackground()).drawFrost(c);
+            c.restoreToCount(save);
+        }
         // Bounds at the origin, moved with the canvas: the band slides with every scroll frame, and
         // onBoundsChange rebuilds the gradients, so only a size change may reset them.
         bounds.set(0, 0, Math.round(rect.width()), Math.round(rect.height()));
