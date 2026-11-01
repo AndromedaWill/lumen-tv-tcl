@@ -29,4 +29,23 @@
     <string name="file_picker_unavailable">Este firmware no ofrece un selector de archivos. Puedes usar la colección integrada.</string>
     <string name="image_import_failed">No se pudo importar. Usa JPEG, PNG o WebP horizontal, de 640×360 a 8192×8192 y hasta 24 MB. Se conserva el fondo anterior.</string>
     <string name="background_credits">Fotografía alternativa: Amanhecer no Hercules · Carlos Perez Couto · CC BY-SA 3.0. Interfaz basada en Lumen (MIT). Licencias completas incluidas en el APK.</string>
+    <string name="control_google_home">Google Home</string>
+    <string name="control_notifications">Notificaciones</string>
+    <string name="control_native_panel">Panel de Google TV</string>
+    <string name="control_unavailable_short">No disponible</string>
+    <string name="native_panel_unavailable">Este panel no está disponible para el launcher en este firmware. Puedes acceder desde los controles originales de Google TV.</string>
+    <string name="notification_access_name">TCL Home · Notificaciones opcionales</string>
+    <string name="notification_optional">Opcional · configurar</string>
+    <string name="notification_local_viewer">Visor local</string>
+    <string name="notification_permission_explanation">Desactivado. Android solicita acceso amplio a las notificaciones. Los filtros solo cambian lo que muestra este visor; no reducen el alcance del permiso. No guardamos un historial.</string>
+    <string name="notification_active_explanation">Visor activo. Solo avisos actuales, agrupados por aplicación y guardados en memoria. Los avisos permanentes y secretos se omiten. Puedes pausar el visor o revocar el acceso en Android.</string>
+    <string name="notification_paused_explanation">Visor pausado y contenido en memoria borrado. El permiso de Android sigue concedido: puedes revocarlo en Gestionar permiso. Activar el visor vuelve a conectar el servicio autorizado.</string>
+    <string name="notification_configure_access">Configurar acceso en Android</string>
+    <string name="notification_manage_access">Gestionar permiso de Android</string>
+    <string name="notification_enable">Activar visor</string>
+    <string name="notification_pause">Pausar visor y vaciar memoria</string>
+    <string name="notification_quiet_shown">Avisos silenciosos: visibles</string>
+    <string name="notification_quiet_hidden">Avisos silenciosos: ocultos</string>
+    <string name="notification_empty">Sin avisos actuales que cumplan los filtros.</string>
+    <string name="notification_access_unavailable">Este firmware no ofrece acceso manual a notificaciones para esta aplicación. El visor permanecerá desactivado.</string>
 </resources>

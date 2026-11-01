@@ -20,14 +20,18 @@ Auditoría inicial registrada en DIAGNOSTICO-TCL-PERU.md. Cualquier lectura adic
 
 | Función | Emulador | TCL Perú |
 |---|---|---|
-| Inicio / D-pad / retorno | Probar en 720p y 1080p | Pendiente aprobación APK |
+| Inicio / D-pad / retorno | Prototipo comprobado en 720p y 1080p | B859 instalado como app; revisión del usuario recibida, siguiente actualización pendiente |
 | Ajustes estándar | Resolver y abrir | Confirmar ajustes TCL y salida con Back |
 | Sin HDMI | Verificar mensaje y foco | No prueba de puertos |
 | HDMI / CEC / eARC / Game Bar | No validable | Probar cada entrada realmente detectada |
 | DRM / Netflix / Prime / Cast / AirPlay | No certifica hardware | Probar sin modificar servicios |
 | Repetición de volumen | No sustituye mando | Helper desactivado; comparar salidas de audio |
 | Reinicio / Inicio predeterminado | No cambiar Home en esta entrega | Prohibido hasta aprobación y reversión |
+| Google Home | No existe el panel de Google en el AVD | Acción exportada identificada y abierta una vez con autorización; falta acceso desde el APK actualizado |
+| Notificaciones | Visor opcional, permiso manual sin conceder | Panel nativo protegido por STATUS_BAR_SERVICE; visor propio apagado, sin acceso concedido |
 
 ## Recuperación sencilla del prototipo
 
-La instalación de prueba futura se abrirá como una aplicación normal, con paquete separado y sin elegirla como Inicio. Para salir, pulsar Inicio: seguirá apareciendo Google TV. También se puede abrir Ajustes → Aplicaciones → TCL Home → Forzar detención. No se necesita habilitar paquetes porque no se deshabilita ninguno. Reiniciar conserva el Inicio original. No distribuir una receta de sustitución de Home hasta conocer firmware, launcher resuelto y procedimiento de recuperación probado.
+La primera instalación de prueba se abrió como una aplicación normal, con paquete separado y sin elegirla como Inicio. Para salir, pulsar Inicio: seguirá apareciendo Google TV. También se puede abrir Ajustes → Aplicaciones → TCL Home → Forzar detención. No se necesita habilitar paquetes porque no se deshabilita ninguno. Reiniciar conserva el Inicio original. La siguiente actualización requiere otra autorización. No ejecutar la sustitución de Home hasta aprobar la versión y comprobar la restauración.
+
+Google Home depende del paquete `com.google.android.apps.tv.dreamx`; Google TV y su panel protegido de avisos dependen de `com.google.android.apps.tv.launcherx`. Ambos se conservan. La preparación del visor propio no concede acceso a notificaciones ni cambia accesibilidad. Evidencia y límites: [CONSISTENCIA-03.md](CONSISTENCIA-03.md).

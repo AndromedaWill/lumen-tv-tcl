@@ -11,7 +11,8 @@ public final class QuickSettingsActivity extends Activity {
         super.onCreate(state);
         panel = new ControlCenterDialog(this,
                 () -> openHome(MainActivity.ACTION_INPUTS),
-                () -> openHome(MainActivity.ACTION_LAUNCHER_SETTINGS), false);
+                () -> openHome(MainActivity.ACTION_LAUNCHER_SETTINGS),
+                () -> openHome(MainActivity.ACTION_NOTIFICATIONS), false);
         panel.setOnDismissListener(d -> finish());
         panel.show();
     }

@@ -27,3 +27,11 @@ No generar commits de APK, SDK o JDK. Mantener hashes y comandos de reproducció
 ## Objetivo aclarado: Inicio principal, no app secundaria
 
 El candidato final debe ocupar Home y ser la experiencia principal al encender y al salir de apps. La apertura manual solo se usa durante pruebas. Ver INICIO-PRINCIPAL.md: preferir selector oficial/preferencia/rol manteniendo stock habilitado, identificar firmware antes de elegir método y no activar nada sin aprobación. Añadir arranque frío, standby, Home físico y restauración a las condiciones de aceptación. El éxito del comando ADB por sí solo no aprueba el cambio.
+
+## Estado después de la revisión física inicial
+
+El primer APK B859 ya se instaló y abrió con autorización como una aplicación normal; Google TV se comprobó como HOME después. Las observaciones del usuario motivaron el pulido documentado en PULIDO-02 y CONSISTENCIA-03. Ya existen seis fondos locales, una ampliación de las cinco franjas iniciales para usar la colección proporcionada. El editor de horarios y la validación prolongada de memoria/HDMI siguen pendientes.
+
+La entrega inmediata es actualizar el prototipo con autorización, probar diseño/fondos/mando y medir rendimiento en la TCL. El visor secundario de notificaciones está preparado pero apagado: acceso exclusivamente manual y medición de consumo activo antes de recomendarlo. No conceder permisos por ADB para adelantar esa prueba. Google Home se abrió con autorización; falta verificar el acceso desde el APK ordinario. No agregar nuevos efectos mientras se evalúa esta entrega.
+
+Después: corregir regresiones físicas, aprobar diseño y preparar una prueba independiente del selector oficial HOME_SETTINGS y restauración, conservando Google TV y los servicios nativos. Cualquier limpieza de paquetes continúa siendo otra auditoría reversible y otra aprobación, sin desactivar launcherx/dreamx ni componentes esenciales.

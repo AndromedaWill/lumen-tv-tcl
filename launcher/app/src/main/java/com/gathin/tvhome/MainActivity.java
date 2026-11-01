@@ -91,6 +91,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
     static final String ACTION_INPUTS = "com.gathin.tvhome.action.INPUTS";
+    static final String ACTION_NOTIFICATIONS="com.gathin.tvhome.action.NOTIFICATIONS";
     static final String ACTION_LAUNCHER_SETTINGS = "com.gathin.tvhome.action.LAUNCHER_SETTINGS";
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
     static int COLUMNS = 4;
@@ -111,6 +112,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private WallpaperPlayer wallpaperPlayer;
     private PersonalBackground personalBackground;
     private TopBarPresentation topPresentation;
+    private NotificationsDialog notificationsDialog;
+    private boolean notificationsReturnPending;
     /** The looping aerial behind Home (config.xml aerial_backdrop); null when that file is not on the TV. */
     private AerialBackdrop aerial;
     private GlassView glass;
@@ -666,6 +669,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private boolean openLauncherSettingsIfAsked(Intent intent) {
+        if(intent!=null && ACTION_NOTIFICATIONS.equals(intent.getAction())){
+            setIntent(new Intent(Intent.ACTION_MAIN));root.post(this::showNotifications);return true;
+        }
         if (intent != null && ACTION_INPUTS.equals(intent.getAction())) {
             setIntent(new Intent(Intent.ACTION_MAIN));
             root.post(this::showInputs);
@@ -710,6 +716,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onResume();
         homeVisible = true;
         if(topPresentation!=null)topPresentation.welcome();
+        if(notificationsReturnPending){notificationsReturnPending=false;root.post(()->{if(homeVisible)showNotifications();});}
         if (adapter != null) adapter.visibleLayers(grid, true);
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
@@ -834,6 +841,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         homeVisible = false;
+        if(notificationsDialog!=null)notificationsDialog.dismiss();
         if(calendarPanel!=null)calendarPanel.dismiss();
         if(topPresentation!=null)topPresentation.stop();
         if (adapter != null) adapter.visibleLayers(grid, false);
@@ -2778,10 +2786,27 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     // ---- launcher settings and module cards -------------------------------------------------------
 
-    /** Keep a normal Settings click for the TV; the launcher's choices live behind hold OK. */
+    /** Optional viewer; opening it never grants the Android notification access. */
+    private void showNotifications(){
+        if(notificationsDialog!=null&&notificationsDialog.isShowing())return;
+        notificationsDialog=new NotificationsDialog(this,this::configureNotificationAccess);
+        notificationsDialog.setOnDismissListener(d->{notificationsDialog=null;if(homeVisible)showSettingsMenu();});
+        notificationsDialog.show();
+    }
+    private void configureNotificationAccess(){
+        Intent intent=new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+        android.content.pm.ResolveInfo match=getPackageManager().resolveActivity(intent,0);
+        if(match==null||match.activityInfo==null||!match.activityInfo.exported
+                ||match.activityInfo.name.contains("CTSDummy")){
+            Toast.makeText(this,R.string.notification_access_unavailable,Toast.LENGTH_LONG).show();return;
+        }
+        try{notificationsReturnPending=true;startActivity(intent);}
+        catch(ActivityNotFoundException|SecurityException unavailable){notificationsReturnPending=false;Toast.makeText(this,R.string.notification_access_unavailable,Toast.LENGTH_LONG).show();}
+    }
+
     private void showSettingsMenu() {
         if (controlCenter != null && controlCenter.isShowing()) return;
-        controlCenter = new ControlCenterDialog(this, this::showInputs, this::showLauncherMenu,
+        controlCenter = new ControlCenterDialog(this, this::showInputs, this::showLauncherMenu, this::showNotifications,
                 animations && !reducedMotion);
         View credit = findViewById(R.id.backdropCredit);
         if (credit != null) credit.setAlpha(0);

@@ -26,6 +26,8 @@ public class LiquidGlassDrawable extends Drawable {
     private final float radiusDp;
     private final int tint;
     private int alpha = 255;
+    private float[] cornersDp;
+    private android.graphics.Path bodyPath, rimPath;
 
     public LiquidGlassDrawable() { this(-1f, 0x30101620); }
 
@@ -33,6 +35,13 @@ public class LiquidGlassDrawable extends Drawable {
         this.radiusDp = radiusDp;
         this.tint = tint;
         updateColor();
+    }
+
+    LiquidGlassDrawable(float[] cornersDp, int tint) {
+        this(0f,tint);
+        if(cornersDp.length!=8)throw new IllegalArgumentException("Eight corner radii required");
+        this.cornersDp=cornersDp.clone();
+        bodyPath=new android.graphics.Path();rimPath=new android.graphics.Path();
     }
 
     public static class Panel extends LiquidGlassDrawable {
@@ -57,11 +66,23 @@ public class LiquidGlassDrawable extends Drawable {
         rim.setShader(new LinearGradient(b.left, b.top, b.right, b.bottom,
                 new int[]{0xC0D6F4FF, 0x28CBE8EF, 0x0CFFFFFF, 0x558B708F},
                 new float[]{0, .34f, .65f, 1}, Shader.TileMode.CLAMP));
+        if(cornersDp!=null){
+            float[] radii=new float[8];
+            for(int i=0;i<8;i++)radii[i]=cornersDp[i]*density;
+            bodyPath.reset();bodyPath.addRoundRect(new RectF(b),radii,android.graphics.Path.Direction.CW);
+            float inset=rim.getStrokeWidth()/2;RectF stroke=new RectF(b);stroke.inset(inset,inset);
+            for(int i=0;i<8;i++)radii[i]=Math.max(0,radii[i]-inset);
+            rimPath.reset();rimPath.addRoundRect(stroke,radii,android.graphics.Path.Direction.CW);
+        }
     }
 
     @Override public void draw(@NonNull Canvas canvas) {
         Rect b = getBounds();
         if (b.isEmpty()) return;
+        if(bodyPath!=null){
+            if(body.getAlpha()>0)canvas.drawPath(bodyPath,body);
+            canvas.drawPath(bodyPath,sheen);canvas.drawPath(rimPath,rim);return;
+        }
         rect.set(b);
         float r = radiusDp < 0 ? rect.height() / 2f : Math.min(radiusDp * density, rect.height() / 2f);
         if (body.getAlpha() > 0) canvas.drawRoundRect(rect, r, r, body);
@@ -74,6 +95,10 @@ public class LiquidGlassDrawable extends Drawable {
     @Override public void getOutline(@NonNull android.graphics.Outline outline) {
         Rect b = getBounds();
         if (b.isEmpty()) return;
+        if(bodyPath!=null){
+            if(android.os.Build.VERSION.SDK_INT>=30)outline.setPath(bodyPath);else outline.setConvexPath(bodyPath);
+            outline.setAlpha(.3f);return;
+        }
         float r = radiusDp < 0 ? b.height() / 2f : Math.min(radiusDp * density, b.height() / 2f);
         outline.setRoundRect(b, r);
         outline.setAlpha(.3f);

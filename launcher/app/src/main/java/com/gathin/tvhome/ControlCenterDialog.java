@@ -20,15 +20,17 @@ import android.widget.Toast;
 /** Native interpretation of Lumen's modular Control Center. No privileged toggles or services. */
 final class ControlCenterDialog extends Dialog {
     private final Activity activity;
-    private final Runnable inputs, customize;
+    private final Runnable inputs, customize, notifications;
     private final boolean motion;
+    private TextView compactLabel;
     private final java.util.List<View> controls = new java.util.ArrayList<>();
 
-    ControlCenterDialog(Activity activity, Runnable inputs, Runnable customize, boolean motion) {
+    ControlCenterDialog(Activity activity, Runnable inputs, Runnable customize, Runnable notifications, boolean motion) {
         super(activity);
         this.activity = activity;
         this.inputs = inputs;
         this.customize = customize;
+        this.notifications=notifications;
         this.motion = motion;
     }
 
@@ -49,26 +51,36 @@ final class ControlCenterDialog extends Dialog {
                 () -> launch(Settings.ACTION_SETTINGS));
         add(row, R.drawable.ic_wifi, R.string.control_network, R.string.control_open,
                 () -> launch(Settings.ACTION_WIFI_SETTINGS));
-        row = row(panel);
-        add(row, R.drawable.ic_volume, R.string.control_sound, R.string.control_open,
-                () -> launch(Settings.ACTION_SOUND_SETTINGS));
-        add(row, R.drawable.ic_picture, R.string.control_picture, R.string.control_open,
-                () -> launch(Settings.ACTION_DISPLAY_SETTINGS));
-        row = row(panel);
-        add(row, R.drawable.ic_bluetooth, R.string.control_bluetooth, R.string.control_open,
-                () -> launch(Settings.ACTION_BLUETOOTH_SETTINGS));
-        add(row, R.drawable.ic_input, R.string.control_inputs, R.string.control_sources, inputs);
-        row = row(panel);
-        add(row, R.drawable.ic_apps, R.string.control_apps, R.string.control_open,
-                () -> launch(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-        add(row, R.drawable.ic_home_settings, R.string.control_home, R.string.control_customize, customize);
-        // Explicit neighbours prevent Android focus search from jumping diagonally between unequal text.
-        for (int i = 0; i < controls.size(); i++) {
-            View v = controls.get(i);
-            v.setNextFocusLeftId(controls.get(i % 2 == 0 ? i : i - 1).getId());
-            v.setNextFocusRightId(controls.get(i % 2 == 0 ? i + 1 : i).getId());
-            v.setNextFocusUpId(controls.get(i < 2 ? i : i - 2).getId());
-            v.setNextFocusDownId(controls.get(i >= 6 ? i : i + 2).getId());
+        row=row(panel);
+        add(row,R.drawable.ic_input,R.string.control_inputs,R.string.control_sources,inputs);
+        add(row,R.drawable.ic_home_settings,R.string.control_home,R.string.control_customize,customize);
+        row=row(panel);
+        add(row,R.drawable.ic_home_settings,R.string.control_google_home,
+                NativePanels.resolve(activity,NativePanels.HOME)==null?R.string.control_unavailable_short:R.string.control_native_panel,
+                ()->NativePanels.open(activity,NativePanels.HOME));
+        add(row,R.drawable.ic_bell,R.string.control_notifications,
+                HomeNotificationService.enabled(activity)?R.string.notification_local_viewer:R.string.notification_optional,
+                notifications);
+        row=row(panel);
+        LinearLayout pair=pair(row);
+        addCompact(pair,R.drawable.ic_volume,R.string.control_sound,()->launch(Settings.ACTION_SOUND_SETTINGS));
+        addCompact(pair,R.drawable.ic_picture,R.string.control_picture,()->launch(Settings.ACTION_DISPLAY_SETTINGS));
+        pair=pair(row);
+        addCompact(pair,R.drawable.ic_bluetooth,R.string.control_bluetooth,()->launch(Settings.ACTION_BLUETOOTH_SETTINGS));
+        addCompact(pair,R.drawable.ic_apps,R.string.control_apps,()->launch(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
+        compactLabel=text(R.string.control_sound,12,0xFFDBE5F2);compactLabel.setGravity(Gravity.CENTER);compactLabel.setAlpha(0);
+        panel.addView(compactLabel,new LinearLayout.LayoutParams(-1,dp(20)));
+        int[][] positions={{0,1},{2,3},{4,5},{6,7,8,9}};
+        for(int r=0;r<positions.length;r++)for(int col=0;col<positions[r].length;col++){
+            int[] here=positions[r];View v=controls.get(here[col]);
+            v.setNextFocusLeftId(controls.get(here[Math.max(0,col-1)]).getId());
+            v.setNextFocusRightId(controls.get(here[Math.min(here.length-1,col+1)]).getId());
+            for(int direction:new int[]{-1,1}){
+                int targetRow=Math.max(0,Math.min(positions.length-1,r+direction));int[] target=positions[targetRow];
+                int targetCol=Math.min(target.length-1,col*target.length/here.length);
+                int id=controls.get(targetRow==r?here[col]:target[targetCol]).getId();
+                if(direction<0)v.setNextFocusUpId(id);else v.setNextFocusDownId(id);
+            }
         }
         setContentView(panel);
         controls.get(0).requestFocus();
@@ -91,10 +103,13 @@ final class ControlCenterDialog extends Dialog {
     }
 
     private LinearLayout row(LinearLayout panel) {
+        return row(panel,52);
+    }
+    private LinearLayout row(LinearLayout panel,int heightDp) {
         LinearLayout row = new LinearLayout(activity);
         row.setClipChildren(false);
         row.setClipToPadding(false);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(52));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(heightDp));
         lp.topMargin = dp(6);
         panel.addView(row, lp);
         return row;
@@ -132,13 +147,20 @@ final class ControlCenterDialog extends Dialog {
         labels.setOrientation(LinearLayout.VERTICAL);
         TextView name = text(title, 13, Color.WHITE);
         name.setSingleLine(true);
-        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        name.setEllipsize(motion?android.text.TextUtils.TruncateAt.MARQUEE:android.text.TextUtils.TruncateAt.END);
+        name.setMarqueeRepeatLimit(-1);
         labels.addView(name);
         TextView sub = text(subtitle, 11, 0xFFBAC3D4);
+        sub.setSingleLine(true);
+        sub.setEllipsize(motion?android.text.TextUtils.TruncateAt.MARQUEE:android.text.TextUtils.TruncateAt.END);
+        sub.setMarqueeRepeatLimit(-1);
         labels.addView(sub);
         tile.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         tile.setOnFocusChangeListener((v, focused) -> {
+            if(focused && compactLabel!=null)compactLabel.setAlpha(0);
             tile.setBackground(new FrostedControlDrawable(activity, tile, focused));
+            name.setSelected(focused&&motion);
+            sub.setSelected(focused&&motion);
             name.setTextColor(focused ? 0xFF182133 : Color.WHITE);
             sub.setTextColor(focused ? 0xFF45546C : 0xFFBAC3D4);
             glyph.setColorFilter(focused ? 0xFF233C61 : 0xFFF2F4FB);
@@ -147,6 +169,35 @@ final class ControlCenterDialog extends Dialog {
         });
         tile.setOnClickListener(v -> { dismiss(); action.run(); });
         controls.add(tile);
+    }
+
+    private LinearLayout pair(LinearLayout row){
+        LinearLayout pair=new LinearLayout(activity);pair.setClipChildren(false);pair.setClipToPadding(false);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-1,1);
+        if(row.getChildCount()>0)p.leftMargin=dp(12);
+        row.addView(pair,p);return pair;
+    }
+
+    private void addCompact(LinearLayout row,int icon,int title,Runnable action){
+        android.widget.FrameLayout tile=new android.widget.FrameLayout(activity);
+        tile.setId(View.generateViewId());tile.setFocusable(true);tile.setClickable(true);
+        tile.setContentDescription(activity.getString(title));
+        boolean left=row.getChildCount()==0;
+        float[] radii=left?new float[]{27,27,4,4,4,4,27,27}:new float[]{4,4,27,27,27,27,4,4};
+        tile.setBackground(new FrostedControlDrawable(activity,tile,false,radii));
+        LinearLayout.LayoutParams position=new LinearLayout.LayoutParams(0,-1,1);
+        if(!left)position.leftMargin=dp(6);
+        row.addView(tile,position);
+        ImageView glyph=new ImageView(activity);glyph.setImageResource(icon);glyph.setColorFilter(0xFFF2F4FB);
+        tile.addView(glyph,new android.widget.FrameLayout.LayoutParams(dp(23),dp(23),Gravity.CENTER));
+        tile.setOnFocusChangeListener((v,focused)->{
+            tile.setBackground(new FrostedControlDrawable(activity,tile,focused,radii));
+            glyph.setColorFilter(focused?0xFF233C61:0xFFF2F4FB);
+            if(compactLabel!=null){compactLabel.setText(title);compactLabel.setAlpha(focused?1:0);}
+            v.animate().cancel();
+            if(motion)v.animate().scaleX(focused?1.025f:1).scaleY(focused?1.025f:1).setDuration(140).start();
+        });
+        tile.setOnClickListener(v->{dismiss();action.run();});controls.add(tile);
     }
 
     private void launch(String action) {

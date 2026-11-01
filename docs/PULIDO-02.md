@@ -1,5 +1,7 @@
 # Pulido después de la primera prueba TCL
 
+Documento histórico del candidato 226AA9. La revisión posterior de iconos, biblioteca, Centro de control y notificaciones opcionales se documenta en [CONSISTENCIA-03.md](CONSISTENCIA-03.md).
+
 Trabajo local del 31 de octubre de 2026 (Lima). El APK B859 sigue siendo la única versión instalada en la TCL. Las modificaciones de este documento se prueban en `emulator-5554`; requieren aprobación específica para actualizar la TV. No se han cambiado HOME, servicios de accesibilidad, entradas, audio ni paquetes del fabricante.
 
 ## Revisión y correcciones

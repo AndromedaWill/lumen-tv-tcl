@@ -129,12 +129,16 @@ shot('settings')
 # Every control and edge must be reachable without diagonal jumps.
 for label, codes, expected in [
     ('cc-right', ['DPAD_RIGHT'], 'Red.'),
-    ('cc-down', ['DPAD_DOWN'], 'Imagen.'),
-    ('cc-left', ['DPAD_LEFT'], 'Sonido.'),
-    ('cc-bottom', ['DPAD_DOWN', 'DPAD_DOWN'], 'Aplicaciones.'),
-    ('cc-bottom-edge', ['DPAD_DOWN'], 'Aplicaciones.'),
-    ('cc-home', ['DPAD_RIGHT'], 'Inicio.'),
-    ('cc-top', ['DPAD_UP', 'DPAD_UP', 'DPAD_UP', 'DPAD_LEFT'], 'Televisor.')]:
+    ('cc-down', ['DPAD_DOWN'], 'Inicio.'),
+    ('cc-left', ['DPAD_LEFT'], 'Entradas.'),
+    ('cc-bottom', ['DPAD_DOWN', 'DPAD_DOWN'], 'Sonido'),
+    ('cc-bottom-edge', ['DPAD_DOWN'], 'Sonido'),
+    ('cc-compact-image', ['DPAD_RIGHT'], 'Imagen'),
+    ('cc-compact-bluetooth', ['DPAD_RIGHT'], 'Bluetooth'),
+    ('cc-compact-apps', ['DPAD_RIGHT'], 'Aplicaciones'),
+    ('cc-notifications', ['DPAD_UP'], 'Notificaciones.'),
+    ('cc-home', ['DPAD_LEFT'], 'Google Home.'),
+    ('cc-top', ['DPAD_UP', 'DPAD_UP', 'DPAD_LEFT'], 'Televisor.')]:
     keys(*codes)
     focused = ui(label)
     record(label, focused.get('content-desc', '').startswith(expected), focused)
@@ -142,6 +146,29 @@ for label, codes, expected in [
 keys('BACK')
 closed = ui('settings-closed')
 record('menu-returns-focus', closed.get('resource-id') == gear.get('resource-id'), closed)
+# The optional viewer must work without notification access. Never grant/toggle that access here.
+access = run('shell', 'settings', 'get', 'secure', 'enabled_notification_listeners')
+record('notification-access-default-off', package not in access, 'Own listener is not approved')
+keys('DPAD_CENTER')
+ready_cc = ui('notification-controls-ready')
+record('notification-controls-ready', ready_cc.get('content-desc', '').startswith('Televisor.'), ready_cc)
+keys('DPAD_DOWN', 'DPAD_DOWN', 'DPAD_RIGHT')
+entry = ui('notification-entry')
+record('notification-entry', entry.get('content-desc', '').startswith('Notificaciones.'), entry)
+keys('DPAD_CENTER')
+configure = ui('notification-off')
+record('notification-configure-focus', configure.get('text') == 'Configurar acceso en Android', configure)
+off_xml = (a.output / 'notification-off.xml').read_text(encoding='utf-8')
+record('notification-no-auto-enable', 'Desactivado.' in off_xml and 'Activar visor' not in off_xml,
+       'Permission explanation visible; no active viewer')
+shot('notification-off')
+services = run('shell', 'dumpsys', 'activity', 'services', package)
+(a.output / 'services-notifications-off.txt').write_text(services, encoding='utf-8')
+record('notification-service-not-running', 'HomeNotificationService' not in services, 'No listener service while access is off')
+keys('BACK')
+returned_cc = ui('notification-back')
+record('notification-back-to-controls', returned_cc.get('content-desc', '').startswith('Televisor.'), returned_cc)
+keys('BACK')
 # The first menu item opens standard TV settings through the safe resolver.
 keys('DPAD_CENTER')
 keys('DPAD_CENTER')
