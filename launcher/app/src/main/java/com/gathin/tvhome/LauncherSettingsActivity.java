@@ -69,6 +69,7 @@ public final class LauncherSettingsActivity extends Activity {
             reverseRow(columnChoices);
             reverseRow(rowChoices);
         }
+        findViewById(R.id.profileNameChoice).setOnClickListener(v->editGreetingName());
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
         wallpaperChoice.setOnClickListener(v -> showWallpaperPicker());
         animationsChoice = findViewById(R.id.animationsChoice);
@@ -123,39 +124,21 @@ public final class LauncherSettingsActivity extends Activity {
     }
 
     private void showWallpaperPicker() {
-        File dir = Config.dir(this);
-        List<File> images = new java.util.ArrayList<>(WallpaperRotation.images(
-                dir == null ? null : new File(dir, "wallpapers")));
-        // A theme with a single wallpaper.jpg offers that picture too (Config maps the choice back to it).
-        File single = dir == null ? null : new File(dir, Config.WALLPAPER_NAME);
-        if (single != null && single.isFile()) images.add(0, single);
-        String[] labels = new String[images.size() + 1];
-        for (int i = 0; i < images.size(); i++) labels[i] = images.get(i).getName();
-        labels[images.size()] = getString(R.string.wallpaper_none);
-        String current = choices.getString(Config.WALLPAPER_CHOICE_KEY, null);
-        int checked = "none".equals(current) ? images.size()
-                : indexOf(images, current);
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.wallpaper_label)
-                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
-                    dialog.dismiss();
-                    if (which == images.size()) {
-                        choices.edit().putString(Config.WALLPAPER_CHOICE_KEY, "none").apply();
-                    } else {
-                        choices.edit().putString(Config.WALLPAPER_CHOICE_KEY,
-                                images.get(which).getName()).apply();
-                    }
-                    setResult(RESULT_OK);
-                    Toast.makeText(this, R.string.wallpaper_applied, Toast.LENGTH_SHORT).show();
-                    refresh();
-                })
-                .setNeutralButton(R.string.wallpaper_theme_default, (dialog, which) -> {
-                    choices.edit().remove(Config.WALLPAPER_CHOICE_KEY).apply();
-                    setResult(RESULT_OK);
-                    refresh();
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        startActivityForResult(new Intent(this,BackgroundSettingsActivity.class),73);
+    }
+    @Override protected void onActivityResult(int request,int result,Intent data){
+        super.onActivityResult(request,result,data);
+        if(request==73 && result==RESULT_OK){setResult(RESULT_OK);refresh();}
+    }
+    private void editGreetingName(){
+        android.widget.EditText input=new android.widget.EditText(this);
+        input.setSingleLine(true);input.setText(getSharedPreferences("home_profile",0).getString("name","Will"));
+        input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(24)});
+        new AlertDialog.Builder(this).setTitle("Nombre para el saludo").setMessage("Nombre local. No se consulta ni cambia tu cuenta de Google.")
+                .setView(input).setPositiveButton("Guardar",(d,w)->{
+                    String name=input.getText().toString().replaceAll("[\\p{Cntrl}]", "").trim();
+                    getSharedPreferences("home_profile",0).edit().putString("name",name).apply();setResult(RESULT_OK);
+                }).setNegativeButton(android.R.string.cancel,null).show();
     }
 
     private static int indexOf(List<File> images, String name) {
@@ -186,11 +169,7 @@ public final class LauncherSettingsActivity extends Activity {
                 getString(advancedEffects ? R.string.on : R.string.off)));
         advancedChoice.setEnabled(animations);
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
-        String wallpaperCurrent = choices.getString(Config.WALLPAPER_CHOICE_KEY, null);
-        wallpaperChoice.setText(getString(R.string.wallpaper_state,
-                "none".equals(wallpaperCurrent) ? getString(R.string.wallpaper_none)
-                        : wallpaperCurrent != null ? wallpaperCurrent
-                        : getString(R.string.wallpaper_theme_default)));
+        wallpaperChoice.setText(R.string.personal_background_title);
         followThemeChoice.setSelected(!hasOnTvChoices());
     }
 

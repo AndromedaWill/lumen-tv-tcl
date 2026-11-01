@@ -20,6 +20,8 @@
     <!-- Android 11+ package visibility: lets the launcher list the TV apps it shows as tiles, and the
          apps that declare a module card (docs/specs/card.md). -->
     <queries>
+        <intent><action android:name="android.intent.action.OPEN_DOCUMENT"/><category android:name="android.intent.category.OPENABLE"/><data android:mimeType="image/*"/></intent>
+        <intent><action android:name="android.intent.action.GET_CONTENT"/><category android:name="android.intent.category.OPENABLE"/><data android:mimeType="image/*"/></intent>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -67,6 +69,7 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".BackgroundSettingsActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity
             android:name=".LauncherSettingsActivity"
             android:exported="false"

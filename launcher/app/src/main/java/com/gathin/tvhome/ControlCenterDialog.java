@@ -44,9 +44,6 @@ final class ControlCenterDialog extends Dialog {
         panel.setClipToPadding(false);
         TextView title = text(R.string.control_center, 21, Color.WHITE);
         panel.addView(title);
-        TextView caption = text(R.string.control_center_hint, 12, 0xFFCCD1DD);
-        LinearLayout.LayoutParams captionParams = new LinearLayout.LayoutParams(-1, dp(24));
-        panel.addView(caption, captionParams);
         LinearLayout row = row(panel);
         add(row, R.drawable.ic_settings, R.string.control_tv, R.string.control_native,
                 () -> launch(Settings.ACTION_SETTINGS));
@@ -98,7 +95,7 @@ final class ControlCenterDialog extends Dialog {
         row.setClipChildren(false);
         row.setClipToPadding(false);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(52));
-        lp.topMargin = dp(8);
+        lp.topMargin = dp(6);
         panel.addView(row, lp);
         return row;
     }

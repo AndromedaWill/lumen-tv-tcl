@@ -29,8 +29,13 @@ No asumir cuatro HDMI. Usar lista y estados reales de TvInputManager; separar `d
 
 ## Iteración Lumen (31/10/2026)
 
-Implementados `ControlCenterDialog` (vista, foco y accesos), `ReflectiveSurfaceDrawable` (luz diagonal), `ScenicBackdropDrawable` (decodificación única fuera de UI y copia de 96×64 para vidrio), `HomeFocusStore` y `SystemSettings`. `DockDecoration` dibuja el material sin cambiar la geometría de los iconos. La ruta original de fondos sigue disponible. La foto incluida añade unos 500 KB de APK y ~2,4 MiB de bitmap tras decodificación a la mitad por eje; medir el PSS total, no inferirlo del archivo comprimido. Sin timers para este fondo estático. El bitmap pequeño se comparte por actividad y no se crea por frame.
+Implementados `ControlCenterDialog` (vista, foco y accesos), `ReflectiveSurfaceDrawable` (luz diagonal), `ScenicBackdropDrawable` (decodificación única fuera de UI y copia de 160×90 para vidrio), `HomeFocusStore` y `SystemSettings`. `DockDecoration` dibuja el material sin cambiar la geometría de los iconos. La ruta original de fondos sigue disponible. La foto original añade unos 500 KB de APK. Tras corregir el destino principal a Full HD se conservan 8,352,000 bytes en los bitmaps CPU principal y difuminado a 1080p; no es el PSS total. Los seis fondos personales añaden unos 4.6 MB comprimidos, sin decodificarse todos a la vez. Sin timers para este fondo estático. El bitmap pequeño se comparte por actividad y no se crea por frame.
 
 No confundir esta vista de accesos con los paneles privilegiados de Android: sonido/imagen/red/Bluetooth se abren mediante intents oficiales y sus controles pertenecen al fabricante. Los handlers ausentes tienen un fallback a ajustes oficiales o un aviso de indisponibilidad.
 
 La revisión final usa LumenDockDrawable con transparencia real y geometría de TILES_FOR[6]. El fondo prepara foto y velo difuminado fuera de UI, sin filtros vivos por frame. AppAdapter conserva capas de hardware solo para las tarjetas visibles de las dos primeras filas mientras Inicio está activo; se liberan al salir/desconectar las vistas. El modo normal usa transformación 2D, con parallax/tilt reservado a advanced_effects. No se oculta un segundo renderizador opaco dentro de la caché del dock.
+
+
+## Pulido y fondos personales
+
+Implementados PersonalBackground (modo/fase y ciclo visible), DayPhase (horario local puro), BackgroundSettingsActivity e ImagePickerIntent (selección/importación privada con detección de stubs), BackdropSize/ScenicBackdropDrawable (preparación y descarte), CalendarPanel, TopBarPresentation, ArtworkPolicy y PackageChanges. Se conserva WallpaperPlayer para fondos heredados y AerialBackdrop para vídeos, sin reproducción simultánea en modo personal. El editor de horas y la importación con un proveedor real de TCL siguen pendientes. Véase [PULIDO-02.md](PULIDO-02.md) para contratos, pruebas y limitaciones.

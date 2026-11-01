@@ -45,6 +45,8 @@ android {
         }
     }
 
+    sourceSets { main { assets.srcDir(rootProject.file("../.dev/personal-assets")) } }
+
     packagingOptions {
         resources {
             // Kotlin metadata pulled in by AndroidX's dependencies. This launcher is plain Java and never reads it;

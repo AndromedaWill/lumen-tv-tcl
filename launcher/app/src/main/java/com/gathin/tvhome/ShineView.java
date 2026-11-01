@@ -19,6 +19,7 @@ public class ShineView extends View {
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float radius;
+    private final android.graphics.Path clip=new android.graphics.Path();
     private float shineX, shineY;
 
     // Typed properties, not "shineX" strings: R8 renames the setters, which would break a reflective animator.
@@ -52,6 +53,8 @@ public class ShineView extends View {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         radius = Math.max(1f, w * 0.75f);
+        clip.rewind();float corner=AppAdapter.cornerRadius(w,getResources().getDisplayMetrics().density);
+        clip.addRoundRect(0,0,w,h,corner,corner,android.graphics.Path.Direction.CW);
         paint.setShader(new RadialGradient(0f, 0f, radius,
                 new int[]{0x40FFFFFF, 0x14FFFFFF, 0x00FFFFFF}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
     }
@@ -59,6 +62,7 @@ public class ShineView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         int save = canvas.save();
+        canvas.clipPath(clip);
         canvas.translate(getWidth() / 2f + shineX, getHeight() / 2f + shineY);
         canvas.drawCircle(0f, 0f, radius, paint);
         canvas.restoreToCount(save);

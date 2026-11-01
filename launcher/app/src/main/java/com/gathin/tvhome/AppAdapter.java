@@ -274,7 +274,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
             if (!seen.add(pkg + '\n' + label)) continue;
             Drawable banner = bundledBanner(appBanners.get(pkg));
-            if (banner == null) banner = loadBanner(pm, ri);
+            if (banner == null && !ArtworkPolicy.preferIcon(pkg, label)) banner = loadBanner(pm, ri);
             Drawable icon = ri.loadIcon(pm);
             if (card != null) {
                 fresh.add(new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent));
@@ -442,7 +442,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.icon.setImageDrawable(e.icon);
             h.icon.setVisibility(View.VISIBLE);
             h.label.setText(e.label);
-            h.label.setVisibility(View.VISIBLE);
+            boolean iconOnly=ArtworkPolicy.preferIcon(e.pkg,e.label);
+            h.label.setVisibility(iconOnly?View.GONE:View.VISIBLE);
+            android.widget.FrameLayout.LayoutParams iconLayout=(android.widget.FrameLayout.LayoutParams)h.icon.getLayoutParams();
+            iconLayout.width=iconLayout.height=Math.round((iconOnly?64:48)*ctx.getResources().getDisplayMetrics().density);
+            iconLayout.bottomMargin=iconOnly?0:Math.round(14*ctx.getResources().getDisplayMetrics().density);
+            h.icon.setLayoutParams(iconLayout);
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {
@@ -723,8 +728,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
             });
             card.setClipToOutline(true);
+            card.addOnLayoutChangeListener((view,l,t,r,b,ol,ot,or,ob) -> {
+                if(r-l!=or-ol) card.setForeground(new ReflectiveSurfaceDrawable(cornerRadius(r-l,density)/density,0));
+            });
             // Static light across the artwork, clipped by the tile's own outline. No outer halo.
-            card.setForeground(new ReflectiveSurfaceDrawable(0, 0x00000000));
+            card.setForeground(new ReflectiveSurfaceDrawable(17, 0x00000000));
 
             card.setOnKeyListener((view, keyCode, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;

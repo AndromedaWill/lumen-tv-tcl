@@ -170,7 +170,7 @@
                 <LinearLayout
                     android:id="@+id/clockBlock"
                     android:layout_width="wrap_content"
-                    android:layout_height="64dp"
+                    android:layout_height="52dp"
                     android:layout_alignParentStart="true"
                     android:paddingStart="0dp"
                     android:paddingEnd="0dp"
@@ -191,7 +191,7 @@
                         android:format24Hour="HH:mm"
                         android:textAppearance="@style/TextAppearance.TV.HeadlineMedium"
                         android:textSize="40sp"
-                        android:textColor="@drawable/pill_text"
+                        android:textColor="#FFFFFFFF"
                         android:duplicateParentState="true"
                         android:includeFontPadding="false" />
 
@@ -205,7 +205,7 @@
                         android:format24Hour=""
                         android:textAppearance="@style/TextAppearance.TV.HeadlineMedium"
                         android:textSize="40sp"
-                        android:textColor="@drawable/pill_text_ampm"
+                        android:textColor="#E6FFFFFF"
                         android:duplicateParentState="true"
                         android:letterSpacing="0.02"
                         android:textAllCaps="true"
@@ -215,7 +215,10 @@
             <TextClock
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:id="@+id/homeDate"
                 android:layout_below="@id/clockBlock"
+                android:includeFontPadding="false"
+                android:layout_marginTop="0dp"
                 android:format12Hour="EEEE d MMMM"
                 android:format24Hour="EEEE d MMMM"
                 android:textColor="#E6FFFFFF"

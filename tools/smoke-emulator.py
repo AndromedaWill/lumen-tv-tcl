@@ -71,13 +71,17 @@ def record(name, ok, detail):
 
 
 run('shell', 'am', 'force-stop', 'pe.tclhome.fixture.files')
+run('shell', 'am', 'force-stop', package)
 run('shell', 'am', 'start', '-W', '-n', component)
+assert wait_top(package), 'Launcher not in foreground at test start'
 time.sleep(2)
 keys('BACK', *(['DPAD_LEFT'] * 7))
 first = ui('dock-first')
 keys('DPAD_LEFT')
 edge = ui('dock-left-edge')
-record('dock-left-edge', first.get('content-desc') == edge.get('content-desc'), edge)
+record('dock-left-edge', first.get('resource-id', '').endswith('/card')
+       and first.get('package') == package
+       and first.get('content-desc') == edge.get('content-desc'), edge)
 shot('home')
 keys('DPAD_RIGHT')
 chosen = ui('chosen-app')

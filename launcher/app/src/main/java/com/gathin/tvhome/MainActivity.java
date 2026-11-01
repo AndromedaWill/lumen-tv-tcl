@@ -109,6 +109,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private RecyclerView grid;
     private FrameLayout root;
     private WallpaperPlayer wallpaperPlayer;
+    private PersonalBackground personalBackground;
+    private TopBarPresentation topPresentation;
     /** The looping aerial behind Home (config.xml aerial_backdrop); null when that file is not on the TV. */
     private AerialBackdrop aerial;
     private GlassView glass;
@@ -202,6 +204,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean promptsPaused;
     /** Rebuild the tiles on resume: Home was fully hidden by an app, or Home was pressed. Not after a side panel such as Wi-Fi settings. */
     private boolean rebuildOnResume = true;
+    private boolean checkPackagesOnResume;
+    private boolean returnFromApp;
+    private final PackageChanges packageChanges=new PackageChanges();
     /** The Inputs or Module cards dropdown while one is open, so onPause can close it. */
     private PopupWindow openPopup;
     /** Reorder mode is on (top-bar button). */
@@ -278,7 +283,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             updateRace();
             updateWifiLabel();
             sky.update();
-            wallpaperPlayer.update();
+            if(wallpaperPlayer!=null)wallpaperPlayer.update();
+            if(personalBackground!=null)personalBackground.update();
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -309,19 +315,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sourcePanelAction = cfg.sourcePanelAction;
 
         root = findViewById(R.id.root);
-        boolean originalLandscape = cfg.wallpapers.isEmpty();
+        boolean personalMode=!PersonalBackground.legacy(this);
+        boolean originalLandscape = cfg.wallpapers.isEmpty() || personalMode;
         if (originalLandscape) {
             root.setBackground(new HorizonDrawable());
-            ScenicBackdropDrawable.load(this, root);
+            if(!personalMode)ScenicBackdropDrawable.load(this, root);
         }
         else root.setBackgroundColor(cfg.backgroundColor);
         View credit = findViewById(R.id.backdropCredit);
-        if (credit != null) credit.setVisibility(originalLandscape ? View.VISIBLE : View.GONE);
-        wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
+        if (credit != null) credit.setVisibility(View.GONE);
+        wallpaperPlayer = personalMode ? null : new WallpaperPlayer(this, root, cfg);
+        personalBackground=new PersonalBackground(this,root,animations&&!reducedMotion);
         sky = findViewById(R.id.sky);
         // Above the wallpaper (it stays as the picture when the video is missing), below everything else.
         // The Background menu's pick, else config.xml's aerial_backdrop.
-        aerial = AerialBackdrop.attach(this, root, root.indexOfChild(sky),
+        aerial = personalMode ? null : AerialBackdrop.attach(this, root, root.indexOfChild(sky),
                 AerialBackdrop.chosen(this, getString(R.string.aerial_backdrop)), cfg.backgroundColor);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
@@ -615,21 +623,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             clockBlock.setOnKeyListener(pillKeys);
             clockBlock.setOnClickListener(v -> showClockPanel(v));
         }
-        if (animations && !reducedMotion) {
-            // The round buttons move like the app icons: lift, lean and settle, and the highlight.
-            for (View button : new View[]{btnMute, btnReorder, btnInputs, btnSettings, clockBlock}) {
-                if (button == null) continue;
-                button.setForeground(new ShineDrawable());
-                button.setClipToOutline(true);   // the highlight stays inside the circle
-                button.setOnFocusChangeListener((view, focused) -> TvFocusMotion.applyButton(view, focused, density));
-            }
-        } else if (advancedEffects) {
-            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnSettings}) {
-                button.setOnFocusChangeListener((view, focused) -> view.animate()
-                        .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
-                        .setDuration(160).start());
-            }
+        for (View button : new View[]{btnMute,btnReorder,btnInputs,btnSettings,clockBlock}) {
+            if(button==null)continue;
+            if(advancedEffects && button!=clockBlock){button.setForeground(new ShineDrawable());button.setClipToOutline(true);}
+            button.setOnFocusChangeListener((view,focused)->{
+                if(animations && !reducedMotion && advancedEffects && view!=clockBlock)TvFocusMotion.applyButton(view,focused,density);
+                else {
+                    float scale=focused?(view==clockBlock?1.015f:1.04f):1f;
+                    if(animations&&!reducedMotion)view.animate().scaleX(scale).scaleY(scale).setDuration(140).start();
+                    else{view.setScaleX(scale);view.setScaleY(scale);}
+                }
+                if(topPresentation!=null)topPresentation.focus(view,focused);
+            });
         }
+        topPresentation=new TopBarPresentation(this,root,animations&&!reducedMotion);
         if (festive) applyFestiveSkin((TextView) btnInputs, (TextView) btnSettings);
 
         // Hide the glass when focus leaves the tiles.
@@ -702,6 +709,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onResume() {
         super.onResume();
         homeVisible = true;
+        if(topPresentation!=null)topPresentation.welcome();
         if (adapter != null) adapter.visibleLayers(grid, true);
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
@@ -709,10 +717,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         promptsPaused = false;
+        if(checkPackagesOnResume){checkPackagesOnResume=false;if(packageChanges.changed(this))rebuildOnResume=true;}
         if (rebuildOnResume) {
             tilesReady = false;
             reloadApps(true);
         }
+        else if(returnFromApp)restoreFocus();
+        returnFromApp=false;
         rebuildOnResume = false;
         updateGreeting();
         updateRace();
@@ -720,7 +731,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         updateInputsButton();
         if (showStats) startStats();
         sky.update();
-        wallpaperPlayer.start();
+        if(wallpaperPlayer!=null)wallpaperPlayer.start();
+        if(personalBackground!=null)personalBackground.start();
         if (aerial != null) aerial.resume();
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && diya != null) {
@@ -784,6 +796,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * ones and cards stay off for this process.
      */
     private void reloadTiles() {
+        long catalogStarted=android.os.SystemClock.elapsedRealtimeNanos();
         if (reordering) endReorder();   // an app installed or removed while reordering: keep the order so far
         // Read these before reload(): rebinding can move focus to the first tile and overwrite them.
         final String returnKey = lastFocusedKey;
@@ -796,6 +809,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         adapter.reload(cards.isEmpty() ? none : CardFeature.run(() -> Cards.shown(cards), none));
         lastFocusedKey = returnKey;
         lastFocused = returnSlot;
+        packageChanges.changed(this);
+        android.util.Log.i("TCLHomePerf","catalogReloadMs="+((android.os.SystemClock.elapsedRealtimeNanos()-catalogStarted)/1e6));
     }
 
     /**
@@ -819,12 +834,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         homeVisible = false;
+        if(calendarPanel!=null)calendarPanel.dismiss();
+        if(topPresentation!=null)topPresentation.stop();
         if (adapter != null) adapter.visibleLayers(grid, false);
         ScenicBackdropDrawable.stop(root);
         if (controlCenter != null) controlCenter.dismiss();
         focusStore.save(lastFocusedKey, lastFocused);
         endReorder();   // Home or another app while reordering keeps the order so far
-        wallpaperPlayer.stop();
+        if(wallpaperPlayer!=null)wallpaperPlayer.stop();
+        if(personalBackground!=null)personalBackground.stop();
         if (aerial != null) aerial.pause();   // frees the video decoder for the app being opened
         stopAmbientAnimation();
         hero.animate().cancel();
@@ -844,13 +862,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onStop() {
         super.onStop();
         unregisterReceiver(packageReceiver);
-        rebuildOnResume = true;
+        checkPackagesOnResume = true;
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
+            if(topPresentation!=null)topPresentation.welcome();
             if (libraryFocusPending && appLibrary == null) focusLibrary();
             showCardPrompt();
         }
@@ -860,7 +879,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onDestroy() {
         super.onDestroy();
         ScenicBackdropDrawable.dispose(root);
-        wallpaperPlayer.close();
+        if(wallpaperPlayer!=null)wallpaperPlayer.close();
         navSound.release();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
@@ -959,7 +978,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (!beginReorder()) return;
         focusTile(Math.max(0, Math.min(lastFocused, adapter.movableCount() - 1)));
-        Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
+        // Focused top-bar label explains the mode without covering the dock with a toast.
     }
 
     /** The start shared by reorder and edit-dock mode. False when there is nothing to move. */
@@ -1260,7 +1279,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             RecyclerView.ViewHolder vh = grid.getChildViewHolder(cardItem);
             if (vh instanceof AppAdapter.Holder) x += ((AppAdapter.Holder) vh).dockEdge * TvFocusMotion.edgeShift(card);
         }
-        float y = r.exactCenterY() - h / 2f - (advancedEffects ? 4f * density : 0f);
+        // offsetDescendantRectToMyCoords includes animated transforms. Use the untransformed layout.
+        int[] rootAt=new int[2], gridAt=new int[2];
+        root.getLocationInWindow(rootAt); grid.getLocationInWindow(gridAt);
+        View tileItem=(View)card.getParent();
+        x=gridAt[0]-rootAt[0]+tileItem.getLeft()+card.getLeft()+card.getWidth()/2f-w/2f;
+        float lift=animations ? 3.75f*density : 0f;
+        float y=gridAt[1]-rootAt[1]+tileItem.getTop()+card.getTop()+card.getHeight()/2f-h/2f-lift;
 
         ViewGroup.LayoutParams lp = glass.getLayoutParams();
         if (lp.width != (int) w || lp.height != (int) h || card.getWidth() != glassCardW) {
@@ -1860,6 +1885,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     @Override public void onAppOpened() {
+        returnFromApp=true;
         navSound.onAppOpened();
     }
 
@@ -2593,6 +2619,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * and rebuilds Home, which starts the new flight.
      */
     private void showBackgroundMenu() {
+        if(PersonalBackground.legacy(this)) {
+            new android.app.AlertDialog.Builder(this).setTitle(R.string.background).setItems(
+                    new String[]{"Mis fondos e importación","Catálogo de fondos aéreos"},(d,i)->{
+                if(i==1)showAerialMenu();else startActivityForResult(new Intent(this,BackgroundSettingsActivity.class),LAUNCHER_SETTINGS_REQUEST);
+            }).show();
+        } else startActivityForResult(new Intent(this,BackgroundSettingsActivity.class),LAUNCHER_SETTINGS_REQUEST);
+    }
+    private void showAerialMenu() {
         java.util.List<String[]> aerials = AerialBackdrop.catalog(this);
         String current = AerialBackdrop.chosen(this, getString(R.string.aerial_backdrop));
         View anchor = findViewById(R.id.btnSettings);
@@ -2672,28 +2706,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /** OK on the clock: a small glass panel under it, in the top-right corner, with the time to the second. */
+    private CalendarPanel calendarPanel;
     private void showClockPanel(View anchor) {
-        View panel = getLayoutInflater().inflate(R.layout.popup_clock, root, false);
-        applyClockFont(panel);
-        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        final PopupWindow popup = glassPopup(panel, Math.max((int) (300 * density), panel.getMeasuredWidth()));
-        panel.setOnClickListener(v -> popup.dismiss());
-        // Down or Left leave the panel the way the remote points: close it and move there, as if it were not
-        // open. Up and Right have nowhere to go from the top-right corner. The popup's keys skip the activity's
-        // dispatchKeyEvent, so note the key here for the navigation tick.
-        panel.setOnKeyListener((v, keyCode, event) -> {
-            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return true;
-            if (keyCode != KeyEvent.KEYCODE_DPAD_DOWN && keyCode != KeyEvent.KEYCODE_DPAD_LEFT) return false;
-            TvFocusMotion.noteKey(event);
-            navSound.noteKey();
-            popup.dismiss();
-            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) focusTile(lastFocused % COLUMNS);
-            else findViewById(R.id.btnSettings).requestFocus();
-            return true;
-        });
-        dropIn(popup, panel, anchor, Gravity.END);
-        panel.requestFocus();
+        if(calendarPanel!=null)calendarPanel.dismiss();
+        calendarPanel=new CalendarPanel(this);
+        calendarPanel.setOnDismissListener(dialog -> {calendarPanel=null;anchor.requestFocus();});
+        calendarPanel.show();
     }
 
     private PopupWindow glassPopup(View panel, int width) {
@@ -2776,9 +2794,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void showLauncherMenu() {
         View anchor = findViewById(R.id.btnSettings);
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        View panel = getLayoutInflater().inflate(R.layout.popup_scroll, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
+        addSettingsMenuRow(rows,popup,R.string.launcher_settings,()->
+                startActivityForResult(new Intent(this,LauncherSettingsActivity.class),LAUNCHER_SETTINGS_REQUEST));
         addSettingsMenuRow(rows, popup, R.string.menu_tv_settings, this::openTvSettings);
         addSettingsMenuRow(rows, popup, R.string.menu_sleep, () -> {
             if (!SleepService.sleep()) Toast.makeText(this, R.string.sleep_unavailable, Toast.LENGTH_LONG).show();
@@ -2789,6 +2809,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         addSettingsMenuRow(rows, popup, R.string.top_buttons, () -> showTopButtonsMenu(0));
         addSettingsMenuRow(rows, popup, R.string.sounds, () -> showSoundsMenu(0));
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
+        capScroll(panel);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.

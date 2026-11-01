@@ -175,8 +175,14 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         gridDim.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         root.addView(gridDim, index + 3, full);
 
-        cover = new View(context);
-        cover.setBackgroundColor(coverColor);
+        cover = new View(context) {
+            @Override protected void onDraw(android.graphics.Canvas canvas) {
+                android.graphics.drawable.Drawable still=root.getBackground();
+                if(still!=null){still.setBounds(0,0,getWidth(),getHeight());still.draw(canvas);}
+                else canvas.drawColor(coverColor);
+            }
+        };
+        cover.setWillNotDraw(false);
         cover.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         root.addView(cover, index + 4, full);
     }

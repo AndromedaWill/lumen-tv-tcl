@@ -180,3 +180,10 @@ El inventario anterior no contenía `com.gathin.tvhome`. Se verificará de nuevo
 | P3 | Fondos personales por horario y funciones avanzadas | Aplazados por decisión de probar primero el hardware |
 
 Tras la prueba real se añadirán resultados, comandos autorizados, capturas y defectos reproducibles a este documento. Corregir los problemas importantes antes de nuevas funciones o animaciones.
+
+
+## Revisión visual comunicada por el usuario
+
+Se recibieron observaciones de iconos antiguos, reflejos recortados, marcador de reorganización desplazado, reloj/fecha, biblioteca transparente y textos en inglés. El usuario solicitó además calendario, saludo y fondos personales. La captura autorizada posterior sí mostró nuestra cuadrícula en TCL: `artifacts/first-tcl/tcl-home-user-review.png`. El filtro autorizado de registros para el PID observado 11241 no devolvió registros de preparación; no se deducen de ello tiempos de decodificación ni un fallo de imagen.
+
+Las correcciones locales y sus límites se documentan en [PULIDO-02.md](PULIDO-02.md). Todavía no están instaladas en TCL y no deben atribuirse a las métricas físicas del APK B859. El usuario continúa usando sus aplicaciones; no se han hecho más consultas ni cambios en la TV fuera de la captura y lectura de log expresamente autorizadas.

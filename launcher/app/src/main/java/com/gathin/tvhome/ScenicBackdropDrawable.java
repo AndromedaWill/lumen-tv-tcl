@@ -14,6 +14,10 @@ final class ScenicBackdropDrawable extends Drawable {
     private boolean lower;
     private float blend;
     private ValueAnimator transition;
+    private Drawable previous;
+    private float appear=1;
+    private ValueAnimator crossfade;
+    interface Source { java.io.InputStream open() throws java.io.IOException; }
     private ScenicBackdropDrawable(Bitmap photo, Bitmap frost) { this.photo=photo; this.frost=frost; }
 
     private static final class LoadTicket {
@@ -26,6 +30,10 @@ final class ScenicBackdropDrawable extends Drawable {
         }
     }
     static void load(Activity activity, View target) {
+        android.content.res.Resources resources=activity.getResources();
+        load(activity,target,()->resources.openRawResource(R.raw.hercules),true,false);
+    }
+    static void load(Activity activity, View target, Source input, boolean legacyTint, boolean animate) {
         Object previous=target.getTag(R.id.backdrop_load_job);
         if(previous instanceof LoadTicket) ((LoadTicket)previous).cancelled=true;
         LoadTicket ticket=new LoadTicket(activity,target);
@@ -33,9 +41,9 @@ final class ScenicBackdropDrawable extends Drawable {
         android.content.res.Resources resources=activity.getResources();
         int width=target.getWidth()>0?target.getWidth():resources.getDisplayMetrics().widthPixels;
         int height=target.getHeight()>0?target.getHeight():resources.getDisplayMetrics().heightPixels;
-        new Thread(() -> prepare(resources,width,height,ticket),"home-photo-prepare").start();
+        new Thread(() -> prepare(resources,width,height,ticket,input,legacyTint,animate),"home-photo-prepare").start();
     }
-    private static void prepare(android.content.res.Resources resources, int width, int height, LoadTicket ticket) {
+    private static void prepare(android.content.res.Resources resources, int width, int height, LoadTicket ticket, Source input, boolean legacyTint, boolean animate) {
         Bitmap source=null,photo=null,frost=null;
         try {
             long started=android.os.SystemClock.elapsedRealtimeNanos();
@@ -43,14 +51,14 @@ final class ScenicBackdropDrawable extends Drawable {
             BitmapFactory.Options bounds=new BitmapFactory.Options();
             bounds.inJustDecodeBounds=true;
             bounds.inScaled=false;
-            BitmapFactory.decodeResource(resources,R.drawable.hercules,bounds);
+            try(java.io.InputStream stream=input.open()){BitmapFactory.decodeStream(stream,null,bounds);}
             BackdropSize size=BackdropSize.forViewport(width,height,bounds.outWidth,bounds.outHeight);
             BitmapFactory.Options options=new BitmapFactory.Options();
             options.inSampleSize=size.sample;
             options.inScaled=false;
             options.inPreferredConfig=Bitmap.Config.ARGB_8888;
             long decodeStarted=android.os.SystemClock.elapsedRealtimeNanos();
-            source=BitmapFactory.decodeResource(resources,R.drawable.hercules,options);
+            try(java.io.InputStream stream=input.open()){source=BitmapFactory.decodeStream(stream,null,options);}
             long decoded=android.os.SystemClock.elapsedRealtimeNanos();
             if(source==null) throw new IllegalStateException("Background decode returned null");
             if(ticket.cancelled)return;
@@ -58,7 +66,7 @@ final class ScenicBackdropDrawable extends Drawable {
             photo=Bitmap.createBitmap(size.width,size.height,Bitmap.Config.ARGB_8888);
             Canvas canvas=new Canvas(photo);
             Paint brush=new Paint(Paint.FILTER_BITMAP_FLAG);
-            brush.setColorFilter(new PorterDuffColorFilter(0x73000000,PorterDuff.Mode.SRC_ATOP));
+            if(legacyTint)brush.setColorFilter(new PorterDuffColorFilter(0x73000000,PorterDuff.Mode.SRC_ATOP));
             float scale=Math.max((float)size.width/source.getWidth(),(float)size.height/source.getHeight());
             float w=source.getWidth()*scale,h=source.getHeight()*scale;
             canvas.drawBitmap(source,null,new RectF((size.width-w)/2,(size.height-h)/2,
@@ -95,11 +103,13 @@ final class ScenicBackdropDrawable extends Drawable {
                 }
                 view.setTag(R.id.backdrop_load_job,null);
                 ScenicBackdropDrawable drawable=new ScenicBackdropDrawable(readyPhoto,readyFrost);
+                Drawable old=view.getBackground();
                 view.setBackground(drawable);
                 drawable.setLower(Boolean.TRUE.equals(view.getTag(R.id.grid)),false);
+                if(animate && owner.hasWindowFocus())drawable.appearFrom(old);
             });
             if(queued){photo=null;frost=null;} // Ownership moves to UI; never recycle published bitmaps.
-        } catch(RuntimeException | OutOfMemoryError failure) {
+        } catch(java.io.IOException | RuntimeException | OutOfMemoryError failure) {
             android.util.Log.w("TCLHomePerf","background prepareFailed="+failure.getClass().getSimpleName());
             // The existing HorizonDrawable remains visible, rather than attaching an empty image.
         } finally {
@@ -167,11 +177,31 @@ final class ScenicBackdropDrawable extends Drawable {
             ScenicBackdropDrawable d=(ScenicBackdropDrawable)root.getBackground();
             if(d.transition!=null){d.transition.cancel();d.transition=null;}
             d.blend=d.lower?1:0;
+            d.finishCrossfade();
         }
     }
+    private void appearFrom(Drawable old) {
+        if(!(old instanceof ScenicBackdropDrawable))return;
+        ScenicBackdropDrawable prior=(ScenicBackdropDrawable)old;
+        prior.finishCrossfade();
+        if(prior.transition!=null){prior.transition.cancel();prior.transition=null;}
+        previous=old;appear=0;
+        crossfade=ValueAnimator.ofFloat(0,1);crossfade.setDuration(450);
+        crossfade.addUpdateListener(a->{appear=(float)a.getAnimatedValue();if(appear>=1)previous=null;invalidateSelf();});
+        crossfade.start();
+    }
+    private void finishCrossfade(){if(crossfade!=null){crossfade.cancel();crossfade=null;}previous=null;appear=1;}
     void drawFrost(Canvas canvas) { paint.setAlpha(255);canvas.drawBitmap(frost,null,destination,paint); }
     @Override public void draw(Canvas canvas) {
         destination.set(getBounds());
+        if(previous!=null && appear<1){
+            previous.setBounds(getBounds());previous.draw(canvas);
+            int layer=canvas.saveLayerAlpha(destination,Math.round(255*appear));
+            drawCurrent(canvas);canvas.restoreToCount(layer);return;
+        }
+        drawCurrent(canvas);
+    }
+    private void drawCurrent(Canvas canvas){
         paint.setAlpha(255);
         if(blend>=1){canvas.drawBitmap(frost,null,destination,paint);return;}
         canvas.drawBitmap(photo,null,destination,paint);

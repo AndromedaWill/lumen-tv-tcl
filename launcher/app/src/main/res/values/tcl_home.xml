@@ -23,4 +23,10 @@
         <item>com.xiaomi.mitv.settings/com.xiaomi.mitv.settings.entry.MainActivity</item>
         <item>com.android.tv.settings/com.android.tv.settings.MainSettings</item>
     </string-array>
+    <string name="calendar_previous">Mes anterior</string>
+    <string name="calendar_next">Mes siguiente</string>
+    <string name="personal_background_title">Fondos · Horario, imagen y archivos</string>
+    <string name="file_picker_unavailable">Este firmware no ofrece un selector de archivos. Puedes usar la colección integrada.</string>
+    <string name="image_import_failed">No se pudo importar. Usa JPEG, PNG o WebP horizontal, de 640×360 a 8192×8192 y hasta 24 MB. Se conserva el fondo anterior.</string>
+    <string name="background_credits">Fotografía alternativa: Amanhecer no Hercules · Carlos Perez Couto · CC BY-SA 3.0. Interfaz basada en Lumen (MIT). Licencias completas incluidas en el APK.</string>
 </resources>

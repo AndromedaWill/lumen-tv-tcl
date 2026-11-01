@@ -61,6 +61,8 @@
             <TextView android:id="@+id/rows3" style="@style/SettingsColumnChoice" android:text="3" />
         </LinearLayout>
 
+        <TextView android:id="@+id/profileNameChoice" style="@style/SettingsRow" android:text="Nombre para el saludo" android:layout_marginTop="18dp" />
+
         <TextView
             android:id="@+id/wallpaperChoice"
             style="@style/SettingsRow"
@@ -117,5 +119,7 @@
             style="@style/SettingsRow"
             android:layout_marginTop="18dp"
             android:text="@string/tv_settings" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:text="@string/background_credits" android:textColor="#AAB8C7" android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>
