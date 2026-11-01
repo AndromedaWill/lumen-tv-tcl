@@ -273,9 +273,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             String label = card != null ? card.label : Cards.cleanLabel(
                     appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
             if (!seen.add(pkg + '\n' + label)) continue;
-            Drawable banner = bundledBanner(appBanners.get(pkg));
-            if (banner == null && !ArtworkPolicy.preferIcon(pkg, label)) banner = loadBanner(pm, ri);
-            Drawable icon = ri.loadIcon(pm);
+            // Match Library: installed icons, not older TV banner wordmarks or packaged replacements.
+            Drawable banner = null;
+            Drawable icon = InstalledArtwork.icon(ctx,ri);
             if (card != null) {
                 fresh.add(new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent));
             } else {
@@ -442,7 +442,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.icon.setImageDrawable(e.icon);
             h.icon.setVisibility(View.VISIBLE);
             h.label.setText(e.label);
-            boolean iconOnly=ArtworkPolicy.preferIcon(e.pkg,e.label);
+            boolean iconOnly=true;
             h.label.setVisibility(iconOnly?View.GONE:View.VISIBLE);
             android.widget.FrameLayout.LayoutParams iconLayout=(android.widget.FrameLayout.LayoutParams)h.icon.getLayoutParams();
             iconLayout.width=iconLayout.height=Math.round((iconOnly?64:48)*ctx.getResources().getDisplayMetrics().density);

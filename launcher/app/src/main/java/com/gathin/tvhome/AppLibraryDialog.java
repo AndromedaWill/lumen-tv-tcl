@@ -119,11 +119,11 @@ final class AppLibraryDialog {
         panel.setLayoutDirection(rtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(12), dp(8), dp(12), dp(12));
-        panel.setBackground(new LiquidGlassDrawable(24f,0xFF141C27));
+        panel.setBackground(new FrostedControlDrawable(activity,panel,false));
         View decor = activity.getWindow().getDecorView();
         catalogWidth = Math.min(dp(800), Math.max(dp(200), decor.getWidth() - dp(64)));
         int width = catalogWidth;
-        int height = dp(280);
+        int height = dp(252);
         popup = new PopupWindow(panel, width, height, true);
         popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popup.setOutsideTouchable(true);
@@ -211,7 +211,7 @@ final class AppLibraryDialog {
 
     private void showCatalog() {
         stopHighlight();
-        resize(catalogWidth, dp(280));
+        resize(catalogWidth, dp(252));
         panel.removeAllViews();
         LinearLayout header = new LinearLayout(activity);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -260,7 +260,7 @@ final class AppLibraryDialog {
         highlight.setAlpha(0f);
         highlight.setFocusable(false);
         highlight.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        shelf.addView(highlight, new FrameLayout.LayoutParams(dp(144), dp(180)));
+        shelf.addView(highlight, new FrameLayout.LayoutParams(dp(144), dp(156)));
         scrollOffset = 0;
         spring = new SpringAnimation(highlight, new FloatPropertyCompat<View>("libraryScrollX") {
             @Override public float getValue(View view) { return view.getTranslationX() + scrollOffset; }
@@ -436,7 +436,7 @@ final class AppLibraryDialog {
     private final class Catalog extends RecyclerView.Adapter<Row> {
         @NonNull @Override public Row onCreateViewHolder(@NonNull ViewGroup parent, int type) {
             FrameLayout row = new FrameLayout(activity);
-            RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(dp(132), dp(170));
+            RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(dp(132), dp(146));
             params.setMargins(dp(6), dp(2), dp(6), dp(2));
             row.setLayoutParams(params);
             row.setPadding(dp(10), dp(12), dp(10), dp(10));
@@ -449,7 +449,7 @@ final class AppLibraryDialog {
             ImageView icon = new ImageView(activity);
             icon.setId(R.id.icon);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            content.addView(icon, new LinearLayout.LayoutParams(dp(60), dp(60)));
+            content.addView(icon, new LinearLayout.LayoutParams(dp(64), dp(64)));
             TextView name = text("", 15, Color.WHITE);
             name.setId(R.id.title);
             name.setGravity(Gravity.CENTER);
@@ -473,23 +473,23 @@ final class AppLibraryDialog {
             ResolveInfo app = apps.get(position);
             String pkg = app.activityInfo.packageName;
             ImageView icon = holder.itemView.findViewById(R.id.icon);
-            try { icon.setImageDrawable(app.loadIcon(activity.getPackageManager())); }
-            catch (RuntimeException unavailable) { icon.setImageResource(R.drawable.ic_apps); }
+            icon.setImageDrawable(InstalledArtwork.icon(activity,app));
             TextView name = holder.itemView.findViewById(R.id.title);
             name.setText(label(app));
             name.setEllipsize(TextUtils.TruncateAt.END);
             TextView status = holder.itemView.findViewById(R.id.status);
             boolean home = onHome.test(pkg);
+            holder.itemView.setContentDescription(label(app)+". "+activity.getString(home?R.string.library_on_home:R.string.library_add_home));
             boolean recent = LibraryApps.recent(installTimes.getOrDefault(pkg, 0L), catalogTime);
-            status.setText(home ? R.string.library_on_home : recent ? R.string.library_recent : R.string.library_add_home);
-            status.setVisibility(View.VISIBLE);
+            // The check alone marks apps already pinned; instructions live once in the header.
+            status.setText("");status.setVisibility(View.GONE);
             holder.itemView.setBackground(surface(home ? 0x1475BBA4 : 0x0CFFFFFF, 18));
             View check = holder.itemView.findViewById(R.id.dot);
             check.getLayoutParams().width = dp(home ? 18 : 8);
             check.getLayoutParams().height = dp(home ? 18 : 8);
             if (home) check.setBackgroundResource(R.drawable.library_check);
             else check.setBackground(surface(0xFF70D9A0, 8));
-            check.setVisibility(home || recent ? View.VISIBLE : View.GONE);
+            check.setVisibility(home ? View.VISIBLE : View.GONE);
             holder.itemView.setOnClickListener(v -> {
                 if (onHome.test(pkg)) open(app);
                 else changeHome(app, true);

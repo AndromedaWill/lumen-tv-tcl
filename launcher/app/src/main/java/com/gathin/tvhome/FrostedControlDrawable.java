@@ -14,10 +14,13 @@ final class FrostedControlDrawable extends LiquidGlassDrawable {
     private final int[] position = new int[2];
     private final float radius;
     FrostedControlDrawable(Activity activity, View tile, boolean focused) {
-        super(27, focused ? 0xE0DDE6F4 : 0x68141A25);
+        this(activity,tile,focused,27);
+    }
+    FrostedControlDrawable(Activity activity, View tile, boolean focused, float radiusDp) {
+        super(radiusDp, focused ? 0xE0DDE6F4 : 0x68141A25);
         this.activity = activity;
         this.tile = tile;
-        radius = 27 * activity.getResources().getDisplayMetrics().density;
+        radius = radiusDp * activity.getResources().getDisplayMetrics().density;
     }
     @Override protected void onBoundsChange(Rect b) {
         super.onBoundsChange(b);
@@ -26,14 +29,12 @@ final class FrostedControlDrawable extends LiquidGlassDrawable {
     }
     @Override public void draw(Canvas canvas) {
         View root = activity.findViewById(R.id.root);
-        if (root != null && root.getBackground() instanceof ScenicBackdropDrawable) {
-            int save = canvas.save();
-            canvas.clipPath(clip);
-            tile.getLocationOnScreen(position);
-            canvas.translate(-position[0], -position[1]);
-            ((ScenicBackdropDrawable) root.getBackground()).drawFrost(canvas);
-            canvas.restoreToCount(save);
-        }
+        int save=canvas.save();canvas.clipPath(clip);
+        if(root!=null && root.getBackground() instanceof ScenicBackdropDrawable){
+            tile.getLocationOnScreen(position);canvas.translate(-position[0],-position[1]);
+            ((ScenicBackdropDrawable)root.getBackground()).drawFrost(canvas);
+        } else canvas.drawColor(0xFF141C27);
+        canvas.restoreToCount(save);
         super.draw(canvas);
     }
 }
