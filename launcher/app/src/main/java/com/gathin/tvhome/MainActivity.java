@@ -859,6 +859,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        ScenicBackdropDrawable.dispose(root);
         wallpaperPlayer.close();
         navSound.release();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
