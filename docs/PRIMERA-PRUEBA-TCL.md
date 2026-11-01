@@ -2,7 +2,7 @@
 
 ## Estado y límite de esta entrega
 
-Preparación local completada el 31 de octubre de 2026 (Lima). **Instalación y apertura en la TCL pendientes de autorización explícita**. Este documento no presenta resultados del emulador como mediciones de la TCL. La prueba inicial es una aplicación normal: no se cambia Inicio, accesibilidad, salvapantallas, HDMI, audio ni paquetes del fabricante.
+Preparación local completada el 31 de octubre de 2026 (Lima). **Instalación y apertura en la TCL realizadas tras las cuatro autorizaciones explícitas del usuario**. Este documento no presenta resultados del emulador como mediciones de la TCL. La prueba inicial es una aplicación normal: no se cambia Inicio, accesibilidad, salvapantallas, HDMI, audio ni paquetes del fabricante.
 
 La TCL diagnosticada usa Android 14/API 34, aplicaciones ARM de 32 bits (`armeabi-v7a`), firmware G08/AU02 y una interfaz ya configurada a 1920×1080 sobre panel 3840×2160. No se ha cambiado esa configuración. Usuario Android: 0.
 
@@ -116,6 +116,25 @@ Son dos alternativas independientes, no una secuencia automática.
 
 En esta primera prueba Google TV permanece instalado y conserva Inicio. Comprobarlo mediante el resolver anterior y el botón Home. El ensayo posterior de HOME_SETTINGS y su reversión constituye otra autorización y otra prueba.
 
+## Resultado de instalación y apertura autorizadas
+
+Se verificaron localmente el destino ADB `192.168.0.107:43209` (G08/Smart_TV_Pro) y el SHA-256 del APK congelado. La consulta del paquete no devolvió coincidencias. El resolver confirmó Google TV: `com.google.android.apps.tv.launcherx/.home.HomeActivity`, prioridad 2. Los únicos comandos de escritura ejecutados en la TCL fueron la instalación y apertura previamente autorizadas, exactamente como se describen arriba.
+
+La instalación devolvió `Performing Streamed Install` / `Success`. La apertura devolvió:
+
+```text
+Status: ok
+LaunchState: COLD
+Activity: pe.tclhome.prototype/com.gathin.tvhome.MainActivity
+TotalTime: 2224
+WaitTime: 2255
+Complete
+```
+
+Los tiempos están en milisegundos y corresponden al arranque medido por am start -W; no son tiempos de respuesta del mando ni certifican fluidez. La confirmación visual, la salida con Home y las métricas de ejecución permanecen pendientes. No se ejecutó ninguna asignación de HOME, activación de accesibilidad, ajuste de pantalla/audio ni operación HDMI. Evidencia bruta: `artifacts/first-tcl/tcl-{package-before,home-before,install,launch}.txt`; metadatos del candidato actualizados con el estado de instalación.
+
+Durante la preparación hubo dos errores locales de captura en PowerShell (colisión con la variable reservada HOME y ausencia de archivo cuando la salida del paquete era vacía). Ambos detuvieron la secuencia antes de instalar; se corrigió la captura, se repitieron únicamente las consultas autorizadas y se aplicaron las condiciones antes de la instalación. No implicaron cambios de configuración en el televisor.
+
 ## Primera revisión con el mando y mediciones pendientes
 
 El usuario prueba primero el dock en las cuatro direcciones, OK/Atrás, nombres/iconos, bajar a la cuadrícula, abrir una aplicación y regresar. Comprobar foco, ausencia de recortes, negros y cierres. No abrir selectores HDMI ni cambiar audio/imagen. No elegir Inicio predeterminado ni servicios de accesibilidad en los ajustes del launcher.
@@ -128,7 +147,7 @@ El inventario anterior no contenía `com.gathin.tvhome`. Se verificará de nuevo
 
 | Prioridad | Hallazgo | Estado |
 | --- | --- | --- |
-| P1 | Compatibilidad física, mando, Home de salida, cierres y render en TCL | Pendiente de instalación autorizada; ninguna prueba física del APK realizada |
+| P1 | Compatibilidad física, mando, Home de salida, cierres y render en TCL | Instalación y arranque correctos; revisión visual con mando y métricas pendientes |
 | P2 | Fondo principal reducido a 960×540 | Corregido a tamaño de interfaz limitado por fuente; cinco nuevas pruebas de cálculo |
 | P2 | Métrica retainedBytes podía interpretarse como memoria total | Sustituida por alcance explícito de bitmaps CPU, temporales separados |
 | P2 | Entrega de trabajo gráfico a una actividad destruida | Token cancelable y referencias débiles; descarte y liberación de temporales |
