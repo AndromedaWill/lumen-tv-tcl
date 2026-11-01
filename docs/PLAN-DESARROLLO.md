@@ -23,3 +23,7 @@
 Sin crash/ANR; foco visible y sin trampas; ninguna tecla de volumen interceptada; ninguna consulta de red nueva; sin actividades persistentes ocultas. Capturas 1280×720 y 1920×1080 reales, no escaladas para simular pruebas. Registrar cold/warm por varias muestras, gfxinfo tras recorrido idéntico, PSS y CPU tras reposo. Si las muestras son ruidosas, declararlo; el emulador solo sirve para regresiones locales.
 
 No generar commits de APK, SDK o JDK. Mantener hashes y comandos de reproducción. Cada cambio funcional tiene commit separable; revertir por Git sin modificar estado del televisor. El código heredado no se considera automáticamente validado por compilar.
+
+## Objetivo aclarado: Inicio principal, no app secundaria
+
+El candidato final debe ocupar Home y ser la experiencia principal al encender y al salir de apps. La apertura manual solo se usa durante pruebas. Ver INICIO-PRINCIPAL.md: preferir selector oficial/preferencia/rol manteniendo stock habilitado, identificar firmware antes de elegir método y no activar nada sin aprobación. Añadir arranque frío, standby, Home físico y restauración a las condiciones de aceptación. El éxito del comando ADB por sí solo no aprueba el cambio.

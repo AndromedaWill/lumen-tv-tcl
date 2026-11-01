@@ -12,9 +12,9 @@ Ambas describen UI 1920×1080, densidad 320 sobre panel 3840×2160. Es configura
 
 ## Nuestra unidad peruana
 
-Modelo comercial TCL C6K; Android, SoC, fingerprint, red activa, resolución UI y firmware: **sin identificar**. No se presupone G08/AU02 ni componentes brasileños.
+Auditoría de solo lectura autorizada el 31/10/2026: G08/G08_4K_GB, Android 14/API 34, MediaTek MT9689, build UTT2.250416.001 AU02, apps de 32 bits. Panel 3840×2160 con override de interfaz 1920×1080 y densidad 320 ya existentes. Usuario 0, Google TV launcherx como Home y titular del rol HOME. Se detecta un manejador oficial HOME_SETTINGS. Ver [DIAGNOSTICO-TCL-PERU.md](DIAGNOSTICO-TCL-PERU.md). Estos datos no certifican todavía sustitución de Home ni comportamiento tras encendido.
 
-Auditoría futura, cuando se autorice conexión, exclusivamente de lectura y serial explícito: getprop selectivo (modelo/producto/device, versión SDK, display de build), wm size/density sin argumentos, dumpsys tv_input, dumpsys audio, dumpsys hdmi_control, resolución del intent HOME, lista de paquetes y activities exportadas de ajustes/TV. Guardar informes completos en backup ignorado por Git; no publicar seriales, SSID, MAC, IP ni cuentas. No ejecutar componentes por exploración.
+Auditoría inicial registrada en DIAGNOSTICO-TCL-PERU.md. Cualquier lectura adicional necesita aprobación individual y destino explícito; no ejecutar un script en bloque bajo esa condición. Catálogo de lecturas posibles: getprop selectivo (modelo/producto/device, versión SDK, display de build), wm size/density sin argumentos, dumpsys tv_input, dumpsys audio, dumpsys hdmi_control, resolución del intent HOME, lista de paquetes y activities exportadas de ajustes/TV. Guardar informes completos en backup ignorado por Git; no publicar seriales, SSID, MAC, IP ni cuentas. No ejecutar componentes por exploración.
 
 ## Matriz de validación
 

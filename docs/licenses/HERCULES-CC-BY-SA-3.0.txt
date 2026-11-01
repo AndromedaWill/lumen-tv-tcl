@@ -1,0 +1,7 @@
+Amanhecer no Hercules --.jpg
+Photograph by Carlos Perez Couto, 18 May 2014.
+Source: https://commons.wikimedia.org/wiki/File:Amanhecer_no_Hercules_--.jpg
+Image: https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Amanhecer_no_Hercules_--.jpg/1920px-Amanhecer_no_Hercules_--.jpg
+License: Creative Commons Attribution-ShareAlike 3.0 Unported
+https://creativecommons.org/licenses/by-sa/3.0/
+Bundled JPEG is the Wikimedia thumbnail, unmodified. The launcher displays it with a center crop and a separate dark scrim. The photo and any adaptations remain CC BY-SA 3.0. This does not change the license of the independent launcher code.

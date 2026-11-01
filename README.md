@@ -1,3 +1,8 @@
+> **Fork TCL Home en desarrollo:** empezar por [la entrega y sus límites](docs/ENTREGA-01.md),
+> [compilación Windows](docs/ENTORNO-WINDOWS.md) y [compatibilidad/restauración](docs/COMPATIBILIDAD-TCL.md).
+> Las instrucciones de instalación y debloat que siguen son documentación histórica del origen;
+> no son el procedimiento autorizado de este prototipo. No modificar la TV ni elegir Inicio predeterminado.
+
 <h1 align="center">Apple TV Launcher</h1>
 
 <p align="center">

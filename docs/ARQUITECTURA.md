@@ -26,3 +26,11 @@ Una imagen decodificada en reposo; como máximo dos durante crossfade. Decodific
 Panel propio del launcher, no panel privilegiado Android. Arriba a la derecha; foco inicial explícito, Back cierra y devuelve foco, todos los elementos alcanzables. Wi-Fi/Ethernet, Bluetooth, sonido, imagen, apps, almacenamiento y ajustes nativos se ofrecen como accesos oficiales. Game Bar solo si se identifica una activity soportada/exportada en firmware real. No adivinar componentes ni lanzar menús de fábrica.
 
 No asumir cuatro HDMI. Usar lista y estados reales de TvInputManager; separar `desconectado`, `desconocido` y `conectado`; agrupar hijos CEC con su padre; preservar customLabel y alias del usuario. Sin entradas: explicación y acceso al selector nativo solo si está disponible. Un emulador no valida rutas de hardware, DRM ni eARC.
+
+## Iteración Lumen (31/10/2026)
+
+Implementados `ControlCenterDialog` (vista, foco y accesos), `ReflectiveSurfaceDrawable` (luz diagonal), `ScenicBackdropDrawable` (decodificación única fuera de UI y copia de 96×64 para vidrio), `HomeFocusStore` y `SystemSettings`. `DockDecoration` dibuja el material sin cambiar la geometría de los iconos. La ruta original de fondos sigue disponible. La foto incluida añade unos 500 KB de APK y ~2,4 MiB de bitmap tras decodificación a la mitad por eje; medir el PSS total, no inferirlo del archivo comprimido. Sin timers para este fondo estático. El bitmap pequeño se comparte por actividad y no se crea por frame.
+
+No confundir esta vista de accesos con los paneles privilegiados de Android: sonido/imagen/red/Bluetooth se abren mediante intents oficiales y sus controles pertenecen al fabricante. Los handlers ausentes tienen un fallback a ajustes oficiales o un aviso de indisponibilidad.
+
+La revisión final usa LumenDockDrawable con transparencia real y geometría de TILES_FOR[6]. El fondo prepara foto y velo difuminado fuera de UI, sin filtros vivos por frame. AppAdapter conserva capas de hardware solo para las tarjetas visibles de las dos primeras filas mientras Inicio está activo; se liberan al salir/desconectar las vistas. El modo normal usa transformación 2D, con parallax/tilt reservado a advanced_effects. No se oculta un segundo renderizador opaco dentro de la caché del dock.
