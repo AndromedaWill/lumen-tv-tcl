@@ -702,6 +702,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onResume() {
         super.onResume();
         homeVisible = true;
+        if (adapter != null) adapter.visibleLayers(grid, true);
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -818,6 +819,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         homeVisible = false;
+        if (adapter != null) adapter.visibleLayers(grid, false);
         ScenicBackdropDrawable.stop(root);
         if (controlCenter != null) controlCenter.dismiss();
         focusStore.save(lastFocusedKey, lastFocused);

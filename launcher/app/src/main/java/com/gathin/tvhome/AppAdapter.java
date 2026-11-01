@@ -92,6 +92,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     static final float FOCUS_SCALE = TvFocusMotion.SCALE;
+    private boolean layersActive;
+    private static final android.view.animation.Interpolator LIGHT_EASE = new DecelerateInterpolator(1.5f);
     /** Design size of a tile (dp); tiles shrink from here when the columns don't fit, see tileWidthPx. */
     static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 108f;
 
@@ -413,14 +415,19 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (rtlAppGrid) h.dockEdge = -h.dockEdge;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
         h.name.setAlpha(labelAlpha(focused));
-        if (animations && !reducedMotion) {
+        h.name.setTranslationY(focused ? (h.dockLabel ? -5 : 4) * ctx.getResources().getDisplayMetrics().density
+                : -6 * ctx.getResources().getDisplayMetrics().density);
+        updateLayer(h);
+        if (animations && !reducedMotion && advancedEffects) {
             TvFocusMotion.set(h.card, h.banner, h.glare, focused, ctx.getResources().getDisplayMetrics().density,
                     h.dockEdge * TvFocusMotion.edgeShift(h.card));
         } else {
             h.card.setScaleX(focused ? focusScale() : 1f);
             h.card.setScaleY(focused ? focusScale() : 1f);
-            h.card.setTranslationY(focused && advancedEffects ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
-            h.card.setTranslationZ(focused && advancedEffects ? 8f * ctx.getResources().getDisplayMetrics().density : 0f);
+            h.card.setTranslationY(focused && animations ? -3.75f * ctx.getResources().getDisplayMetrics().density : 0f);
+            h.card.setTranslationZ(focused && animations ? 4f * ctx.getResources().getDisplayMetrics().density : 0f);
+            h.card.setRotationX(0); h.card.setRotationY(0); h.card.setTranslationX(0);
+            h.glare.setAlpha(0);
             h.banner.setScaleX(focused && advancedEffects ? 1.035f : 1f);
             h.banner.setScaleY(focused && advancedEffects ? 1.035f : 1f);
         }
@@ -591,6 +598,36 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         return !animations ? 1.06f : reducedMotion ? (advancedEffects ? 1.12f : 1.10f) : TvFocusMotion.SCALE;
     }
 
+    /** Lumen keeps compositor layers for its first two rows. Retain only these visible tiles. */
+    private void updateLayer(Holder h) {
+        int pos = h.getBindingAdapterPosition();
+        boolean retain = layersActive && animations && !reducedMotion && pos >= 0 && pos < dockSize * 2;
+        int type = retain ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE;
+        if (h.card.getLayerType() != type) h.card.setLayerType(type, null);
+    }
+
+    @Override public void onViewAttachedToWindow(@NonNull RecyclerView.ViewHolder holder) {
+        super.onViewAttachedToWindow(holder);
+        if (holder instanceof Holder) updateLayer((Holder) holder);
+    }
+    @Override public void onViewDetachedFromWindow(@NonNull RecyclerView.ViewHolder holder) {
+        if (holder instanceof Holder) {
+            ((Holder) holder).card.animate().cancel();
+            ((Holder) holder).card.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
+        super.onViewDetachedFromWindow(holder);
+    }
+    void visibleLayers(RecyclerView grid, boolean retain) {
+        layersActive = retain;
+        for (int i=0;i<grid.getChildCount();i++) {
+            RecyclerView.ViewHolder holder = grid.getChildViewHolder(grid.getChildAt(i));
+            if (!(holder instanceof Holder)) continue;
+            Holder h=(Holder)holder;
+            if (retain) updateLayer(h);
+            else { h.card.animate().cancel(); h.name.animate().cancel(); h.banner.animate().cancel(); h.card.setLayerType(View.LAYER_TYPE_NONE,null); }
+        }
+    }
+
     /** A vivid colour sampled from the app's banner (or icon), cached per entry; a card's accent when it set one. */
     int ambientColorAt(int position) {
         if (position < 0 || position >= items.size()) return 0xFF444444;
@@ -713,13 +750,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     banner.setScaleY(1f);
                     name.setAlpha(labelAlpha(focused));
                     name.setTranslationY(0f);
-                } else if (reducedMotion) {
-                    view.animate().scaleX(s).scaleY(s)
-                            .translationY(focused && advancedEffects ? -4f * density : 0f)
-                            .translationZ(focused && advancedEffects ? 8f * density : 0f)
-                            .setDuration(focused ? 120 : 80)
-                            .setInterpolator(new DecelerateInterpolator())
-                            .withLayer().start();
+                } else if (reducedMotion || !advancedEffects) {
+                    float lightScale = focused ? (reducedMotion ? scale : FOCUS_SCALE) : 1f;
+                    view.animate().scaleX(lightScale).scaleY(lightScale)
+                            .translationY(focused ? -3.75f * density : 0f)
+                            .translationZ(focused ? 4f * density : 0f)
+                            .setDuration(reducedMotion ? (focused ? 120 : 80) : (focused ? 220 : 180))
+                            .setInterpolator(LIGHT_EASE).start();
                     name.animate().alpha(labelAlpha(focused)).setDuration(100).start();
                     // Same place as the full motion's slide ends: the layout's -6dp is only its starting point, and
                     // left there the name overlaps the zoomed tile.
