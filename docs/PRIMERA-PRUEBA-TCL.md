@@ -131,9 +131,33 @@ WaitTime: 2255
 Complete
 ```
 
-Los tiempos están en milisegundos y corresponden al arranque medido por am start -W; no son tiempos de respuesta del mando ni certifican fluidez. La confirmación visual, la salida con Home y las métricas de ejecución permanecen pendientes. No se ejecutó ninguna asignación de HOME, activación de accesibilidad, ajuste de pantalla/audio ni operación HDMI. Evidencia bruta: `artifacts/first-tcl/tcl-{package-before,home-before,install,launch}.txt`; metadatos del candidato actualizados con el estado de instalación.
+Los tiempos están en milisegundos y corresponden al arranque medido por am start -W; no son tiempos de respuesta del mando ni certifican fluidez. La confirmación visual y la salida con Home permanecen pendientes; las primeras métricas se detallan a continuación. No se ejecutó ninguna asignación de HOME, activación de accesibilidad, ajuste de pantalla/audio ni operación HDMI. Evidencia bruta: `artifacts/first-tcl/tcl-{package-before,home-before,install,launch}.txt`; metadatos del candidato actualizados con el estado de instalación.
 
 Durante la preparación hubo dos errores locales de captura en PowerShell (colisión con la variable reservada HOME y ausencia de archivo cuando la salida del paquete era vacía). Ambos detuvieron la secuencia antes de instalar; se corrigió la captura, se repitieron únicamente las consultas autorizadas y se aplicaron las condiciones antes de la instalación. No implicaron cambios de configuración en el televisor.
+
+## Primera muestra física de rendimiento y comprobación de Inicio
+
+Tras autorización individual se ejecutaron el resolver HOME posterior, `dumpsys meminfo pe.tclhome.prototype`, `dumpsys gfxinfo pe.tclhome.prototype framestats` y `exec-out screencap -p`, todos contra `192.168.0.107:43209`. Google TV sigue resolviendo como Inicio, con la misma actividad y prioridad 2. No se alteraron estadísticas con reset ni se inyectaron pulsaciones.
+
+| Dato | Muestra obtenida en la TCL |
+| --- | --- |
+| PID del launcher en esta lectura | 11241 |
+| PSS | 67,703 KiB = 66.12 MiB |
+| Swap PSS | 213 KiB |
+| Inicio/MainActivity: fotogramas acumulados | 2,033 |
+| Inicio/MainActivity: jank informado por Android | 57 / 2,033 = 2.80 % |
+| Inicio/MainActivity: p50 / p95 / p99 | 12 / 30 / 42 ms |
+| Proceso completo: fotogramas acumulados | 2,317 |
+| Proceso completo: jank informado por Android | 67 / 2,317 = 2.89 % |
+| Proceso completo: p50 / p95 / p99 | 13 / 30 / 48 ms |
+
+Los percentiles proceden del histograma de gfxinfo, con su discretización; no se presentan como percentiles exactos de todas las filas del buffer circular de framestats. El bloque legacy ofrece otro criterio (5.85 % en MainActivity / 5.65 % global); se conserva en el bruto, sin mezclarlo con el jank principal. La sesión incluye uso manual previo y lanzamiento inicial, sin una ruta controlada ni reinicio de contadores. No permite atribuir los picos a una animación concreta ni comparar con el original. Los contadores de alta latencia de entrada no son una medida en milisegundos de respuesta del mando.
+
+El launcher estaba sin visibilidad al recoger la muestra: gfxinfo informa MainActivity con visibility=8 y contextos detenidos. La captura, de 1920×1080, muestra otra aplicación. Por ello **no es una captura de nuestra interfaz**, no verifica el fondo/dock en hardware y no se publica como ejemplo del diseño. Tampoco se toma esta lectura de PSS en segundo plano como memoria en primer plano o como evidencia de estabilización. No se ha cerrado ni reabierto nada para preparar artificialmente esta muestra.
+
+El coste de decodificación en TCL, CPU, térmicas, arranque caliente, respuesta del mando y evolución de memoria tras ciclos definidos siguen pendientes. No se ha instalado una base adicional ni se inventa una comparación física. Son necesarias nuevas lecturas autorizadas y la confirmación de que nuestro launcher está visible para completar el ensayo.
+
+Datos brutos: `artifacts/first-tcl/tcl-home-after.txt`, `tcl-meminfo-initial.txt`, `tcl-gfxinfo-initial.txt`, `tcl-screen-first.png`; resumen derivado: `tcl-initial-measurements.json`.
 
 ## Primera revisión con el mando y mediciones pendientes
 
@@ -147,7 +171,8 @@ El inventario anterior no contenía `com.gathin.tvhome`. Se verificará de nuevo
 
 | Prioridad | Hallazgo | Estado |
 | --- | --- | --- |
-| P1 | Compatibilidad física, mando, Home de salida, cierres y render en TCL | Instalación y arranque correctos; revisión visual con mando y métricas pendientes |
+| P1 | Compatibilidad física, mando, Home de salida, cierres y render en TCL | Instalación/arranque correctos y Google TV confirmado como Inicio después; validación visual y botón Home pendientes |
+| P2 | Colas de fotogramas en primera sesión física | Inicio p95 30 ms, p99 42 ms, jank 2.80 %; falta ensayo controlado y base física, no añadir efectos para compensarlo |
 | P2 | Fondo principal reducido a 960×540 | Corregido a tamaño de interfaz limitado por fuente; cinco nuevas pruebas de cálculo |
 | P2 | Métrica retainedBytes podía interpretarse como memoria total | Sustituida por alcance explícito de bitmaps CPU, temporales separados |
 | P2 | Entrega de trabajo gráfico a una actividad destruida | Token cancelable y referencias débiles; descarte y liberación de temporales |
