@@ -20,7 +20,7 @@ Auditoría inicial registrada en DIAGNOSTICO-TCL-PERU.md. Cualquier lectura adic
 
 | Función | Emulador | TCL Perú |
 |---|---|---|
-| Inicio / D-pad / retorno | Prototipo comprobado en 720p y 1080p | B859 instalado como app; revisión del usuario recibida, siguiente actualización pendiente |
+| Inicio / D-pad / retorno | Prototipo comprobado en 720p y 1080p | EC8011 actualizado y abierto con autorización como app; Google TV sigue HOME, nueva revisión del mando pendiente |
 | Ajustes estándar | Resolver y abrir | Confirmar ajustes TCL y salida con Back |
 | Sin HDMI | Verificar mensaje y foco | No prueba de puertos |
 | HDMI / CEC / eARC / Game Bar | No validable | Probar cada entrada realmente detectada |

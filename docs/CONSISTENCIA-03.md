@@ -1,6 +1,6 @@
 # Consistencia visual, paneles y notificaciones opcionales
 
-Revisión del 31/10/2026. Continúa [PULIDO-02.md](PULIDO-02.md). La TCL sigue con el primer APK B859; este candidato se valida localmente antes de solicitar una actualización independiente.
+Revisión preparada el 31/10/2026, como continuación de [PULIDO-02.md](PULIDO-02.md). La TCL conservaba B859 durante su preparación. EC8011 se actualizó posteriormente con autorización específica y se abrió como aplicación normal; Google TV se verificó como HOME antes y después. Resultado físico y pendientes: [ACTUALIZACION-TCL-EC8011.md](ACTUALIZACION-TCL-EC8011.md).
 
 ## Presentación y recursos
 
@@ -79,5 +79,7 @@ Brutos: `benchmark-before-verified/`, `benchmark-after-verified/`; resumen deriv
 **Consumo activo de notificaciones pendiente.** No se recomienda habilitarlo todavía: requiere primero una concesión manual y una medición de RAM/CPU con la misma carga, apagado/encendido, sin guardar avisos privados. Las pruebas con el visor desactivado no cuantifican su coste cuando recibe notificaciones. No se habilitó el permiso durante estas pruebas.
 
 ## Próxima prueba física
+
+La instalación y apertura de esta prueba ya se ejecutaron con autorización, sin cambiar HOME. La revisión personal y las mediciones físicas nuevas siguen pendientes; el plan siguiente mantiene sus límites.
 
 Pedir aprobación específica para actualizar únicamente `pe.tclhome.prototype` y abrirlo como aplicación normal. Comprobar Google TV como HOME antes y después mediante lecturas autorizadas. Probar iconos, biblioteca, círculos y los seis fondos; confirmar Google Home desde el APK sin tocar controles. Mantener notificaciones apagadas durante la primera comparación de rendimiento. No cambiar HOME, accesibilidad, HDMI, audio ni paquetes del fabricante.

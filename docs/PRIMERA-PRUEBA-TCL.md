@@ -190,6 +190,8 @@ Las correcciones locales y sus límites se documentan en [PULIDO-02.md](PULIDO-0
 
 ## Comprobación autorizada de paneles nativos
 
+Actualización posterior: EC8011 ya se instaló y abrió con autorización como app normal. Google TV sigue siendo HOME. Resultado y pendientes en [ACTUALIZACION-TCL-EC8011.md](ACTUALIZACION-TCL-EC8011.md). Las métricas B859 anteriores siguen siendo históricas.
+
 Posteriormente el usuario autorizó consultas de metadatos de los paquetes Google TV y su panel ambiental. Se identificó `com.google.android.apps.tv.dreamx` y su acción `com.google.android.libraries.tv.smarthome.intent.action.OPEN_SMART_HOME`, exportada y sin permiso requerido en el resultado. El panel nativo de notificaciones de `com.google.android.apps.tv.launcherx` sí exige STATUS_BAR_SERVICE; no se intenta eludirlo.
 
 Con autorización específica se ejecutó una única apertura de Google Home: `adb -s 192.168.0.107:43209 shell am start -W -a com.google.android.libraries.tv.smarthome.intent.action.OPEN_SMART_HOME -p com.google.android.apps.tv.dreamx`. Devolvió Status ok/WARM, TotalTime 1473 ms, WaitTime 1587 ms. El usuario confirmó el panel y lo cerró con «Descartar». No hubo captura del panel, control de dispositivos domésticos ni cambios de configuración. Evidencia: `artifacts/first-tcl/google-home-open-test.txt`.
