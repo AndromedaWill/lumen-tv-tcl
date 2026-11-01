@@ -26,20 +26,21 @@ final class CalendarPanel extends Dialog {
     private int dp(int n){return Math.round(n*activity.getResources().getDisplayMetrics().density);}
     private TextView text(String value,int size){
         TextView v=new TextView(activity);v.setText(value);v.setTextSize(size);v.setTextColor(Color.WHITE);
+        v.setTypeface(activity.getResources().getFont(R.font.inter_medium));
         v.setGravity(Gravity.CENTER);v.setIncludeFontPadding(false);return v;
     }
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);requestWindowFeature(Window.FEATURE_NO_TITLE);Window w=getWindow();if(w==null)return;
         w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(22),dp(18),dp(22),dp(18));
-        body.setBackground(new FrostedControlDrawable(activity,body,false));setContentView(body);
+        body.setBackground(TvDesign.panel(activity));setContentView(body);
         w.setLayout(dp(380),WindowManager.LayoutParams.WRAP_CONTENT);w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-        WindowManager.LayoutParams p=w.getAttributes();p.dimAmount=.65f;p.gravity=Gravity.CENTER;w.setAttributes(p);render();
+        WindowManager.LayoutParams p=w.getAttributes();p.dimAmount=TvDesign.dim(activity);p.gravity=Gravity.CENTER;w.setAttributes(p);render();
     }
     private void render(){
         android.view.View focused=body.findFocus();int focusId=focused==null?nextId:focused.getId();
         body.removeAllViews();Locale locale=activity.getResources().getConfiguration().getLocales().get(0);
-        TextView title=text(month.format(DateTimeFormatter.ofPattern("LLLL yyyy",locale)),23);
+        TextView title=text(month.format(DateTimeFormatter.ofPattern("LLLL yyyy",locale)),20);TvDesign.typography(title,TvDesign.Type.SECTION);
         LinearLayout heading=new LinearLayout(activity);heading.setGravity(Gravity.CENTER_VERTICAL);
         TextView previous=arrow("‹",previousId,-1),next=arrow("›",nextId,1);
         previous.setContentDescription(activity.getString(R.string.calendar_previous));next.setContentDescription(activity.getString(R.string.calendar_next));
@@ -60,7 +61,7 @@ final class CalendarPanel extends Dialog {
                 TextView cell=text(valid?Integer.toString(day):"",16);
                 if(valid&&month.atDay(day).equals(today)){
                     android.graphics.drawable.GradientDrawable bg=new android.graphics.drawable.GradientDrawable();
-                    bg.setColor(0xFFE5EFFA);bg.setCornerRadius(dp(14));cell.setBackground(bg);cell.setTextColor(0xFF12202F);
+                    bg.setColor(TvDesign.color(activity,R.color.ds_selected_fill));bg.setCornerRadius(dp(14));bg.setStroke(dp(1),TvDesign.color(activity,R.color.ds_accent));cell.setBackground(bg);cell.setContentDescription("Hoy, "+day);
                 }
                 line.addView(cell,new LinearLayout.LayoutParams(0,dp(32),1));
             }body.addView(line);
@@ -68,7 +69,7 @@ final class CalendarPanel extends Dialog {
     }
     private TextView arrow(String glyph,int id,int direction){
         TextView arrow=text(glyph,32);arrow.setId(id);arrow.setFocusable(true);arrow.setClickable(true);
-        arrow.setBackgroundResource(R.drawable.clock_focus_bg);
+        TvDesign.control(activity,arrow,20);
         arrow.setOnClickListener(v->{month=month.plusMonths(direction);render();});
         return arrow;
     }

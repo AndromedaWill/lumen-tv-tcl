@@ -119,7 +119,7 @@ final class AppLibraryDialog {
         panel.setLayoutDirection(rtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(12), dp(8), dp(12), dp(12));
-        panel.setBackground(new FrostedControlDrawable(activity,panel,false));
+        panel.setBackground(TvDesign.panel(activity));
         View decor = activity.getWindow().getDecorView();
         catalogWidth = Math.min(dp(800), Math.max(dp(200), decor.getWidth() - dp(64)));
         int width = catalogWidth;
@@ -340,11 +340,12 @@ final class AppLibraryDialog {
                 new ComponentName(app.activityInfo.packageName, app.activityInfo.name));
         // TV apps keep the leanback launch intent, so an app already running resumes instead of restarting.
         if (tvPackages.contains(app.activityInfo.packageName)) intent.addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-        try { activity.startActivity(intent); }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        Runnable open=()->{try { activity.startActivity(intent); }
         catch (ActivityNotFoundException | SecurityException e) {
             Toast.makeText(activity, activity.getString(R.string.cant_open, label(app)), Toast.LENGTH_SHORT).show();
-        }
+        }};
+        if(activity instanceof MainActivity)((MainActivity)activity).beforeAppLaunch(open);else open.run();
     }
 
     private void showActions(ResolveInfo app, View anchor) {
@@ -449,7 +450,10 @@ final class AppLibraryDialog {
             ImageView icon = new ImageView(activity);
             icon.setId(R.id.icon);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            content.addView(icon, new LinearLayout.LayoutParams(dp(64), dp(64)));
+            icon.setClipToOutline(true);icon.setOutlineProvider(new android.view.ViewOutlineProvider(){
+                @Override public void getOutline(View v,android.graphics.Outline o){o.setRoundRect(0,0,v.getWidth(),v.getHeight(),dp(10));}
+            });
+            content.addView(icon, new LinearLayout.LayoutParams(dp(108), dp(64)));
             TextView name = text("", 15, Color.WHITE);
             name.setId(R.id.title);
             name.setGravity(Gravity.CENTER);
@@ -473,7 +477,8 @@ final class AppLibraryDialog {
             ResolveInfo app = apps.get(position);
             String pkg = app.activityInfo.packageName;
             ImageView icon = holder.itemView.findViewById(R.id.icon);
-            icon.setImageDrawable(InstalledArtwork.icon(activity,app));
+            String title=label(app);
+            icon.setImageDrawable(LumenArtwork.forApp(activity,pkg,title,LumenArtwork.builtIn(pkg,title)?null:InstalledArtwork.icon(activity,app)));
             TextView name = holder.itemView.findViewById(R.id.title);
             name.setText(label(app));
             name.setEllipsize(TextUtils.TruncateAt.END);

@@ -15,16 +15,16 @@ final class FrostedControlDrawable extends LiquidGlassDrawable {
     private final float radius;
     private float[] corners;
     FrostedControlDrawable(Activity activity, View tile, boolean focused) {
-        this(activity,tile,focused,27);
+        this(activity,tile,focused,TvDesign.radius(activity,R.dimen.ds_radius_panel));
     }
     FrostedControlDrawable(Activity activity, View tile, boolean focused, float radiusDp) {
-        super(radiusDp, focused ? 0xE0DDE6F4 : 0x68141A25);
+        super(radiusDp,TvDesign.color(activity,focused?R.color.ds_focus_fill:R.color.ds_glass_fill));
         this.activity = activity;
         this.tile = tile;
         radius = radiusDp * activity.getResources().getDisplayMetrics().density;
     }
     FrostedControlDrawable(Activity activity, View tile, boolean focused, float[] radiiDp) {
-        super(radiiDp,focused?0xE0DDE6F4:0x68141A25);
+        super(radiiDp,TvDesign.color(activity,focused?R.color.ds_focus_fill:R.color.ds_glass_fill));
         this.activity=activity;this.tile=tile;radius=0;
         corners=radiiDp.clone();float scale=activity.getResources().getDisplayMetrics().density;
         for(int i=0;i<corners.length;i++)corners[i]*=scale;

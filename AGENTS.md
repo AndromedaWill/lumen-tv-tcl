@@ -10,4 +10,5 @@ Leer `C:\Users\milmil\.codex\RTK.md`. Este proyecto es un fork de desarrollo, no
 - Separar cada nueva responsabilidad; reutilizar biblioteca, dock y navegación existentes. Sin dependencias nuevas sin necesidad concreta.
 - Capturas reales del emulador y métricas brutas en artifacts (ignorado); nunca presentar maquetas como ejecución.
 - La aprobación visual precede al siguiente rediseño mayor. El volumen experimental permanece separado y apagado.
+- Toda función nueva debe respetar `docs/DESIGN-SYSTEM.md`, reutilizar sus tokens/componentes y validarse con foco y reposo a 720p y 1080p. Justificar las excepciones por función.
 - Mantener licencias MIT/OFL y referencias de los ports. No recursos propietarios de Apple nuevos.

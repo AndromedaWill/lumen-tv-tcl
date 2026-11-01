@@ -197,3 +197,14 @@ Posteriormente el usuario autorizó consultas de metadatos de los paquetes Googl
 Con autorización específica se ejecutó una única apertura de Google Home: `adb -s 192.168.0.107:43209 shell am start -W -a com.google.android.libraries.tv.smarthome.intent.action.OPEN_SMART_HOME -p com.google.android.apps.tv.dreamx`. Devolvió Status ok/WARM, TotalTime 1473 ms, WaitTime 1587 ms. El usuario confirmó el panel y lo cerró con «Descartar». No hubo captura del panel, control de dispositivos domésticos ni cambios de configuración. Evidencia: `artifacts/first-tcl/google-home-open-test.txt`.
 
 Esta prueba permite preparar el acceso desde nuestro Centro de control; aún debe validarse desde el APK ordinario en la siguiente actualización autorizada. No se ha actualizado la aplicación de la TCL ni cambiado su HOME. La revisión local siguiente se recoge en [CONSISTENCIA-03.md](CONSISTENCIA-03.md). Los avisos propios quedan apagados, con permiso exclusivamente manual y consumo activo pendiente de medir. Conservar launcherx y dreamx por sus funciones nativas y por la reversión a Google TV.
+
+
+## Revisión física de EC8011 y prioridades (01/11/2026)
+
+Se completaron únicamente las tres lecturas expresamente autorizadas después de la actualización: captura, meminfo y gfxinfo framestats. Brutos en `artifacts/tcl-review-06/physical/`. La captura es de nuestro proceso a 1920×1080; confirma iconos cuadrados interiores y no es una captura de Google TV presentada como propia.
+
+PSS observado: **84,082 KiB (82.11 MiB)**; SwapPSS 11,105 KiB. La sesión acumuló **3,166 fotogramas**, 180 janky (**5.69%**), percentiles de histograma p50/p95/p99 **13/34/117 ms**. No se reiniciaron estadísticas ni se impuso un recorrido controlado; no se puede atribuir el p99 a una pulsación concreta, calcular latencia del mando ni compararlo directamente con el primer APK. El launcher base original no se instaló en la TCL para una comparación equivalente. No inventar esa referencia.
+
+P1: eliminar cambio a foto ajena/fundido al abrir apps con vídeo; reducir el salto al bajar al catálogo; mantener liberación del decodificador. P2: uniformar arte de aplicaciones, subir etiquetas superiores, compactar Centro de control y colocar avisos debajo. La revisión local 06 aborda estos puntos y el sistema visual se recoge en [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md). El nuevo APK todavía no está instalado en la TCL; allí sigue EC8011.
+
+Las autorizaciones de estas lecturas ya se utilizaron. Una nueva captura, lectura, actualización, apertura o prueba automatizada en la TCL requiere autorización específica. No se han tocado HOME, permisos de notificaciones, accesibilidad, HDMI o políticas de audio. El consumo con NotificationListenerService autorizado continúa sin medir y no se recomienda activarlo todavía.

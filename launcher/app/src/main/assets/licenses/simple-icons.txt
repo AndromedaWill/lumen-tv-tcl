@@ -1,0 +1,14 @@
+App glyphs: Simple Icons, CC0 1.0 Universal.
+https://github.com/simple-icons/simple-icons
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The YouTube, Netflix, Spotify, Plex, Twitch, Kodi and Jellyfin vector paths
+were taken from tools/glyphs.json in the user's Lumen reference checkout.
+Lumen's composition (full tile colour and centred logo) inspired the native
+renderer. Its MIT notice is preserved separately in lumen-MIT.txt.
+
+Brand names and logos remain trademarks of their respective owners.
+This launcher is not affiliated with or endorsed by those brands.
+Apple TV uses only its installed application's resource; no new Apple logo
+was imported. The Xuper identifier is an original X-shaped tile, not a claim
+to an official vendor logo and never a rebranding of a Magis TV resource.

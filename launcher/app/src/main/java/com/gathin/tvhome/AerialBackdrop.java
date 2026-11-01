@@ -27,7 +27,9 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
 
     /** Not final: cycling swaps in the next aerial. */
     private File file;
-    private final View cover;
+    private final VideoStillCover cover;
+    private final SurfaceView video;
+    private final java.util.List<View> layers=new java.util.ArrayList<>();
     private final View gridDim;
     private final SharedPreferences prefs;
     private MediaPlayer player;
@@ -112,6 +114,10 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         if (!f.canRead()) return null;
         return new AerialBackdrop(context, root, index, f, coverColor, cycle);
     }
+    static AerialBackdrop attachFile(Context c,FrameLayout root,int index,File file){
+        if(file!=null){SharedPreferences p=c.getSharedPreferences(PREFS,Context.MODE_PRIVATE);if(!file.getName().equals(p.getString("manual_file","")))p.edit().putString("manual_file",file.getName()).remove(POSITION).apply();}
+        return file!=null&&file.canRead()?new AerialBackdrop(c,root,index,file,0xFF121A28,false):null;
+    }
 
     private final Context context;
     private final boolean cycle;
@@ -125,17 +131,13 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         return new File(file.getParentFile(), all.get(i % all.size())[0]);
     }
 
-    /** One aerial finished while cycling: fade to black, swap in the next, and the first frame fades it back in. */
+    /** Hold this video's sampled frame until the next video has rendered. */
     private void advance() {
         File next = nextInCycle();
         Log.i(TAG, "cycle: " + file.getName() + " -> " + next.getName());
-        release();
+        cover.showStill();release();
         prefs.edit().putString(CYCLE_FILE, next.getName()).remove(POSITION).apply();
-        cover.animate().cancel();
-        cover.animate().alpha(1f).setDuration(300).withEndAction(() -> {
-            file = next;
-            start();
-        }).start();
+        file=next;start();
     }
 
     private AerialBackdrop(Context context, FrameLayout root, int index, File file, int coverColor, boolean cycle) {
@@ -146,10 +148,11 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         FrameLayout.LayoutParams full = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 
-        SurfaceView video = new SurfaceView(context);
+        video = new SurfaceView(context);
         video.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         video.getHolder().addCallback(this);
         root.addView(video, index, full);
+        layers.add(video);
 
         // Top: a light shade under the clock and pills. Bottom: deeper, under the dock and the grid.
         View top = new View(context);
@@ -157,6 +160,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
                 new int[]{0x8C000000, 0x26000000, 0x00000000}));
         root.addView(top, index + 1, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 (int) (context.getResources().getDisplayMetrics().heightPixels * 0.42f)));
+        layers.add(top);
         View bottom = new View(context);
         bottom.setBackground(new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
                 new int[]{0xB3000000, 0x40000000, 0x00000000}));
@@ -164,6 +168,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
                 (int) (context.getResources().getDisplayMetrics().heightPixels * 0.62f));
         lp.gravity = android.view.Gravity.BOTTOM;
         root.addView(bottom, index + 2, lp);
+        layers.add(bottom);
         for (View v : new View[]{top, bottom}) {
             v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             v.forceHasOverlappingRendering(false);
@@ -174,17 +179,14 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         gridDim.setAlpha(0f);
         gridDim.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         root.addView(gridDim, index + 3, full);
+        layers.add(gridDim);
 
-        cover = new View(context) {
-            @Override protected void onDraw(android.graphics.Canvas canvas) {
-                android.graphics.drawable.Drawable still=root.getBackground();
-                if(still!=null){still.setBounds(0,0,getWidth(),getHeight());still.draw(canvas);}
-                else canvas.drawColor(coverColor);
-            }
-        };
+        cover = new VideoStillCover(context,root,video);
+        cover.poster(file,prefs.getInt(POSITION,0));
         cover.setWillNotDraw(false);
         cover.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         root.addView(cover, index + 4, full);
+        layers.add(cover);
     }
 
     /** Focus in the grid below the dock: dim the aerial so the icons own the screen, as tvOS does. */
@@ -197,15 +199,18 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
 
     void resume() {
         resumed = true;
+        video.setVisibility(View.VISIBLE);
         start();
     }
 
     void pause() {
         resumed = false;
+        cover.showStill();
+        video.setVisibility(View.INVISIBLE);
         release();
-        cover.animate().cancel();
-        cover.setAlpha(1f);
     }
+    void beforeAppLaunch(Runnable launch){if(resumed&&player!=null)cover.beforeAppLaunch(launch);else launch.run();}
+    void close(){pause();cover.close();for(View v:layers)if(v.getParent() instanceof ViewGroup)((ViewGroup)v.getParent()).removeView(v);layers.clear();}
 
     private void start() {
         if (!resumed || surface == null || player != null) return;
@@ -229,12 +234,15 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
             });
             mp.setOnInfoListener((p, what, extra) -> {
                 if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START && player == p) {
-                    cover.animate().alpha(0f).setDuration(700).start();
+                    cover.begin();
+                    // Surface already has content: don't crossfade an old still over moving video.
+                    cover.animate().cancel();cover.setAlpha(0f);
                 }
                 return false;
             });
             mp.setOnErrorListener((p, what, extra) -> {
                 Log.w(TAG, "playback error " + what + "/" + extra + " for " + file.getName());
+                cover.showStill();
                 release();
                 return true;
             });
@@ -265,6 +273,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     @Override public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) { }
 
     @Override public void surfaceDestroyed(SurfaceHolder holder) {
+        cover.showStill();
         surface = null;
         release();
     }

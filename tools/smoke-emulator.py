@@ -72,7 +72,10 @@ def record(name, ok, detail):
 
 run('shell', 'am', 'force-stop', 'pe.tclhome.fixture.files')
 run('shell', 'am', 'force-stop', package)
-run('shell', 'am', 'start', '-W', '-n', component)
+time.sleep(.8)
+launch = run('shell', 'am', 'start', '-W', '-a', 'android.intent.action.MAIN',
+             '-c', 'android.intent.category.LEANBACK_LAUNCHER', '-n', component)
+(a.output / 'launch.txt').write_text(launch, encoding='utf-8')
 assert wait_top(package), 'Launcher not in foreground at test start'
 time.sleep(2)
 keys('BACK', *(['DPAD_LEFT'] * 7))
@@ -95,7 +98,8 @@ record('focus-after-back', returned.get('content-desc') == chosen.get('content-d
 # Background first, so Android dispatches onPause, then simulate process loss.
 run('shell', 'am', 'start', '-W', '-n', 'pe.tclhome.fixture.files/pe.tclhome.fixture.FixtureActivity')
 run('shell', 'am', 'force-stop', package)
-run('shell', 'am', 'start', '-W', '-n', component)
+run('shell', 'am', 'start', '-W', '-a', 'android.intent.action.MAIN',
+    '-c', 'android.intent.category.LEANBACK_LAUNCHER', '-n', component)
 time.sleep(2)
 restored = ui('process-restored')
 record('focus-after-process-loss', restored.get('content-desc') == chosen.get('content-desc'), restored)
@@ -132,16 +136,17 @@ for label, codes, expected in [
     ('cc-down', ['DPAD_DOWN'], 'Inicio.'),
     ('cc-left', ['DPAD_LEFT'], 'Entradas.'),
     ('cc-bottom', ['DPAD_DOWN', 'DPAD_DOWN'], 'Sonido'),
-    ('cc-bottom-edge', ['DPAD_DOWN'], 'Sonido'),
     ('cc-compact-image', ['DPAD_RIGHT'], 'Imagen'),
     ('cc-compact-bluetooth', ['DPAD_RIGHT'], 'Bluetooth'),
     ('cc-compact-apps', ['DPAD_RIGHT'], 'Aplicaciones'),
-    ('cc-notifications', ['DPAD_UP'], 'Notificaciones.'),
+    ('cc-right-edge', ['DPAD_RIGHT'], 'Aplicaciones'),
+    ('cc-footer-down', ['DPAD_DOWN'], 'Notificaciones desactivadas'),
+    ('cc-notifications', ['BACK'], 'Notificaciones.'),
     ('cc-home', ['DPAD_LEFT'], 'Google Home.'),
     ('cc-top', ['DPAD_UP', 'DPAD_UP', 'DPAD_LEFT'], 'Televisor.')]:
     keys(*codes)
     focused = ui(label)
-    record(label, focused.get('content-desc', '').startswith(expected), focused)
+    record(label, (focused.get('content-desc', '') or focused.get('text', '')).startswith(expected), focused)
 
 keys('BACK')
 closed = ui('settings-closed')
@@ -157,17 +162,27 @@ entry = ui('notification-entry')
 record('notification-entry', entry.get('content-desc', '').startswith('Notificaciones.'), entry)
 keys('DPAD_CENTER')
 configure = ui('notification-off')
-record('notification-configure-focus', configure.get('text') == 'Configurar acceso en Android', configure)
-off_xml = (a.output / 'notification-off.xml').read_text(encoding='utf-8')
+record('notification-compact-focus', configure.get('text', '').startswith('Notificaciones desactivadas'), configure)
+shot('notification-compact')
+keys('DPAD_CENTER')
+configure = ui('notification-disclosure')
+record('notification-disclosure-focus', configure.get('text','').startswith('Desactivado.'), configure)
+off_xml = (a.output / 'notification-disclosure.xml').read_text(encoding='utf-8')
 record('notification-no-auto-enable', 'Desactivado.' in off_xml and 'Activar visor' not in off_xml,
        'Permission explanation visible; no active viewer')
 shot('notification-off')
+keys('DPAD_DOWN')
+configure = ui('notification-configure-button')
+record('notification-configure-focus', configure.get('text') == 'Configurar acceso en Android', configure)
 services = run('shell', 'dumpsys', 'activity', 'services', package)
 (a.output / 'services-notifications-off.txt').write_text(services, encoding='utf-8')
 record('notification-service-not-running', 'HomeNotificationService' not in services, 'No listener service while access is off')
 keys('BACK')
+collapsed = ui('notification-collapsed')
+record('notification-details-collapse', collapsed.get('text', '').startswith('Notificaciones desactivadas'), collapsed)
+keys('BACK')
 returned_cc = ui('notification-back')
-record('notification-back-to-controls', returned_cc.get('content-desc', '').startswith('Televisor.'), returned_cc)
+record('notification-back-to-controls', returned_cc.get('content-desc', '').startswith('Notificaciones.'), returned_cc)
 keys('BACK')
 # The first menu item opens standard TV settings through the safe resolver.
 keys('DPAD_CENTER')

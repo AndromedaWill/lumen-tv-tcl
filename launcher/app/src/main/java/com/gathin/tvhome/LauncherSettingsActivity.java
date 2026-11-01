@@ -32,6 +32,9 @@ public final class LauncherSettingsActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_launcher_settings);
+        android.view.View page=((android.view.ViewGroup)findViewById(android.R.id.content)).getChildAt(0);
+        page.setId(R.id.root);page.setBackground(TvDesign.screen(this));TvDesign.settingsTree(this,page);
+        TvDesign.typography(findViewById(R.id.settingsTitle),TvDesign.Type.TITLE);
         choices = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         Config config = Config.load(this);
         columns = config.columns;
@@ -159,9 +162,11 @@ public final class LauncherSettingsActivity extends Activity {
     private void refresh() {
         for (int i = 0; i < columnChoices.length; i++) {
             columnChoices[i].setSelected(columns == i + 4);
+            columnChoices[i].setText(Integer.toString(i+4)+(columns==i+4?"  ✓":""));
         }
         for (int i = 0; i < rowChoices.length; i++) {
             rowChoices[i].setSelected(rowsBelowDock == i);
+            rowChoices[i].setText(Integer.toString(i)+(rowsBelowDock==i?"  ✓":""));
         }
         animationsChoice.setText(getString(R.string.animations_state,
                 getString(animations ? R.string.on : R.string.off)));

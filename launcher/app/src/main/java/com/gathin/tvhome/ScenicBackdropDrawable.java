@@ -46,12 +46,14 @@ final class ScenicBackdropDrawable extends Drawable {
     private static void prepare(android.content.res.Resources resources, int width, int height, LoadTicket ticket, Source input, boolean legacyTint, boolean animate) {
         Bitmap source=null,photo=null,frost=null;
         try {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
             long started=android.os.SystemClock.elapsedRealtimeNanos();
             long cpuStarted=android.os.Debug.threadCpuTimeNanos();
             BitmapFactory.Options bounds=new BitmapFactory.Options();
             bounds.inJustDecodeBounds=true;
             bounds.inScaled=false;
             try(java.io.InputStream stream=input.open()){BitmapFactory.decodeStream(stream,null,bounds);}
+            if(ticket.cancelled)return;
             BackdropSize size=BackdropSize.forViewport(width,height,bounds.outWidth,bounds.outHeight);
             BitmapFactory.Options options=new BitmapFactory.Options();
             options.inSampleSize=size.sample;
@@ -83,13 +85,15 @@ final class ScenicBackdropDrawable extends Drawable {
             long blurStarted=android.os.SystemClock.elapsedRealtimeNanos();
             blur(frost);
             blurred.drawColor(0x42000000);
+            long blurredAt=android.os.SystemClock.elapsedRealtimeNanos();
+            photo.prepareToDraw();frost.prepareToDraw();
             long prepared=android.os.SystemClock.elapsedRealtimeNanos();
             long workerCpu=android.os.Debug.threadCpuTimeNanos()-cpuStarted;
             if(ticket.cancelled)return;
             // Exactly one record per completed load, on the worker; never in draw/key/frame callbacks.
             android.util.Log.i("TCLHomePerf", "background source="+bounds.outWidth+"x"+bounds.outHeight
                     +" photo="+size.width+"x"+size.height+" sample="+size.sample
-                    +" decodeMs="+((decoded-decodeStarted)/1e6)+" blurMs="+((prepared-blurStarted)/1e6)
+                    +" decodeMs="+((decoded-decodeStarted)/1e6)+" blurMs="+((blurredAt-blurStarted)/1e6)+" bitmapPrepMs="+((prepared-blurredAt)/1e6)
                     +" prepareMs="+((prepared-started)/1e6)+" workerCpuMs="+(workerCpu/1e6)
                     +" sourceBitmapBytes="+sourceBytes
                     +" backgroundCpuBitmapBytes="+(photo.getAllocationByteCount()+frost.getAllocationByteCount())
@@ -126,6 +130,11 @@ final class ScenicBackdropDrawable extends Drawable {
         stop(root);
         if(root.getBackground() instanceof ScenicBackdropDrawable)root.setBackground(null);
         // Displayed bitmaps are released by GC/render-thread ownership, not recycled while in use.
+    }
+    static boolean cancelPending(View root){
+        Object value=root.getTag(R.id.backdrop_load_job);
+        if(!(value instanceof LoadTicket))return false;
+        ((LoadTicket)value).cancelled=true;root.setTag(R.id.backdrop_load_job,null);return true;
     }
     /** Separable box blur, two passes over only 160x90 pixels. Never runs during drawing. */
     private static void blur(Bitmap image) {

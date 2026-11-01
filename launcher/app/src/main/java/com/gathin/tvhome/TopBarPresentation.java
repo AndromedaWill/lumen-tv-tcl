@@ -33,7 +33,7 @@ final class TopBarPresentation {
         int[] pos=new int[2],origin=new int[2];button.getLocationInWindow(pos);root.getLocationInWindow(origin);
         label.setTranslationX(Math.max(dp(16),Math.min(root.getWidth()-label.getMeasuredWidth()-dp(16),
                 pos[0]-origin[0]+(button.getWidth()-label.getMeasuredWidth())/2f)));
-        label.setTranslationY(pos[1]-origin[1]+button.getHeight()+dp(8));label.setAlpha(1);
+        label.setTranslationY(pos[1]-origin[1]+button.getHeight()-dp(1));label.setAlpha(1);
     }
     void welcome(){
         long now=android.os.SystemClock.elapsedRealtime();
@@ -54,4 +54,5 @@ final class TopBarPresentation {
         });
     }
     void stop(){root.removeCallbacks(fade);greeting.animate().cancel();greeting.setAlpha(0);label.setAlpha(0);}
+    void hideLabel(){label.setAlpha(0);}
 }

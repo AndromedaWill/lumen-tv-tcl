@@ -112,7 +112,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private WallpaperPlayer wallpaperPlayer;
     private PersonalBackground personalBackground;
     private TopBarPresentation topPresentation;
-    private NotificationsDialog notificationsDialog;
     private boolean notificationsReturnPending;
     /** The looping aerial behind Home (config.xml aerial_backdrop); null when that file is not on the TV. */
     private AerialBackdrop aerial;
@@ -440,6 +439,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         grid.setHasFixedSize(true);
         grid.setItemAnimator(null);
+        grid.setItemViewCacheSize(COLUMNS*2); // Bound holders survive dock/grid returns; no extra hardware layers.
         // Tiles that scroll out while one is carried come back from the view cache without a rebind; set their
         // dimming again whenever one attaches, so none stays dim after the drop.
         grid.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
@@ -841,7 +841,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         homeVisible = false;
-        if(notificationsDialog!=null)notificationsDialog.dismiss();
         if(calendarPanel!=null)calendarPanel.dismiss();
         if(topPresentation!=null)topPresentation.stop();
         if (adapter != null) adapter.visibleLayers(grid, false);
@@ -888,6 +887,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onDestroy();
         ScenicBackdropDrawable.dispose(root);
         if(wallpaperPlayer!=null)wallpaperPlayer.close();
+        if(personalBackground!=null)personalBackground.close();
+        if(aerial!=null)aerial.close();
         navSound.release();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
@@ -1272,6 +1273,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             });
             return;
         }
+        if(dockRow && glassLevel()==0){
+            hideGlass();
+            positionFocusedTile(position,card,6f*density,0);
+            return;
+        }
         // Tile rect in root coordinates, using layout positions (ignores the scale animation).
         Rect r = tileRect;
         r.set(0, 0, card.getWidth(), card.getHeight());
@@ -1330,6 +1336,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             springX.animateToFinalPosition(x);
             springY.animateToFinalPosition(y - glassScrollShift);
         }
+        positionFocusedTile(position,card,pad,r.top);
+    }
+
+    private void positionFocusedTile(int position,View card,float pad,float topInRoot){
         View item = (View) card.getParent();
         if (dockRow && position < COLUMNS) {
             // Dock: park it at the bottom of the screen.
@@ -1342,7 +1352,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (!animations || reducedMotion) grid.scrollBy(0, dy);
                 else grid.smoothScrollBy(0, dy, SCROLL_EASE, SCROLL_MS);
             }
-            showHero(position, scroll ? r.top - dy : r.top);
+            showHero(position, scroll ? topInRoot - dy : topInRoot);
         } else {
             // A plain grid (dock_row false) has no dock to carry the glow, so it follows every tile there.
             if (dockRow) hideHero();
@@ -1355,6 +1365,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Refits the glass to the focused holder once the grid layout and tile dimensions settle. */
     private void refitGlass() {
+        if(dockRow && glassLevel()==0)return;
         if (isDestroyed() || adapter.appCount() == 0 || libraryFocusPending) return;
         int pos = Math.max(0, Math.min(lastFocused, adapter.appCount() - 1));
         RecyclerView.ViewHolder vh = grid.findViewHolderForAdapterPosition(pos);
@@ -1372,6 +1383,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     // ---- top shelf -------------------------------------------------------------------------------
 
     private void showHero(int position, float dockTopInRoot) {
+        if(hero.getVisibility()!=View.VISIBLE && ambient.getVisibility()!=View.VISIBLE)return;
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
         float y = dockTopInRoot - 14 * density - 26 * density - hero.getHeight();
@@ -1666,6 +1678,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void hideGlass() {
+        if(springX!=null)springX.cancel();if(springY!=null)springY.cancel();
         if (!glassShown) return;
         glassShown = false;
         glass.animate().cancel();
@@ -1892,6 +1905,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         return true;
     }
 
+    @Override public void beforeAppLaunch(Runnable launch) {
+        Runnable guarded=()->{if(homeVisible&&!isFinishing()&&!isDestroyed())launch.run();};
+        if(aerial!=null)aerial.beforeAppLaunch(guarded);
+        else if(personalBackground!=null)personalBackground.beforeAppLaunch(guarded);
+        else guarded.run();
+    }
     @Override public void onAppOpened() {
         returnFromApp=true;
         navSound.onAppOpened();
@@ -1994,7 +2013,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         };
         grid.addOnScrollListener(pendingFocusScroll);
-        grid.smoothScrollToPosition(pos);
+        int park=dockRow && lastFocused<COLUMNS && pos>=COLUMNS ? parkDockBy(grid) : Integer.MIN_VALUE;
+        if(park!=Integer.MIN_VALUE && park>0){
+            ScenicBackdropDrawable.setLower(root,true,!reducedMotion);
+            if(reducedMotion){grid.scrollBy(0,park);grid.post(()->{
+                cancelPendingFocusScroll();RecyclerView.ViewHolder h=grid.findViewHolderForAdapterPosition(pos);
+                if(h!=null)h.itemView.findViewById(R.id.card).requestFocus();
+            });}
+            else grid.smoothScrollBy(0,park,SCROLL_EASE,PARK_MS);
+        }else grid.smoothScrollToPosition(pos);
     }
 
     // ---- top bar ---------------------------------------------------------------------------------
@@ -2627,12 +2654,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * and rebuilds Home, which starts the new flight.
      */
     private void showBackgroundMenu() {
-        if(PersonalBackground.legacy(this)) {
-            new android.app.AlertDialog.Builder(this).setTitle(R.string.background).setItems(
-                    new String[]{"Mis fondos e importación","Catálogo de fondos aéreos"},(d,i)->{
-                if(i==1)showAerialMenu();else startActivityForResult(new Intent(this,BackgroundSettingsActivity.class),LAUNCHER_SETTINGS_REQUEST);
-            }).show();
-        } else startActivityForResult(new Intent(this,BackgroundSettingsActivity.class),LAUNCHER_SETTINGS_REQUEST);
+        startActivityForResult(new Intent(this,BackgroundSettingsActivity.class),LAUNCHER_SETTINGS_REQUEST);
     }
     private void showAerialMenu() {
         java.util.List<String[]> aerials = AerialBackdrop.catalog(this);
@@ -2788,10 +2810,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Optional viewer; opening it never grants the Android notification access. */
     private void showNotifications(){
-        if(notificationsDialog!=null&&notificationsDialog.isShowing())return;
-        notificationsDialog=new NotificationsDialog(this,this::configureNotificationAccess);
-        notificationsDialog.setOnDismissListener(d->{notificationsDialog=null;if(homeVisible)showSettingsMenu();});
-        notificationsDialog.show();
+        showSettingsMenu();controlCenter.focusNotifications();
     }
     private void configureNotificationAccess(){
         Intent intent=new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
@@ -2806,12 +2825,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void showSettingsMenu() {
         if (controlCenter != null && controlCenter.isShowing()) return;
-        controlCenter = new ControlCenterDialog(this, this::showInputs, this::showLauncherMenu, this::showNotifications,
+        controlCenter = new ControlCenterDialog(this, this::showInputs, this::showLauncherMenu, this::configureNotificationAccess,
                 animations && !reducedMotion);
         View credit = findViewById(R.id.backdropCredit);
         if (credit != null) credit.setAlpha(0);
+        if(topPresentation!=null)topPresentation.hideLabel();
         controlCenter.setOnDismissListener(d -> {
             findViewById(R.id.btnSettings).requestFocus();
+            if(homeVisible&&topPresentation!=null)topPresentation.focus(findViewById(R.id.btnSettings),true);
             if (credit != null) credit.setAlpha(headerScroll == 0 ? 1 : 0);
         });
         controlCenter.show();

@@ -9,17 +9,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingStart="72dp"
-        android:paddingEnd="72dp"
-        android:paddingTop="38dp"
-        android:paddingBottom="38dp">
+        android:paddingStart="@dimen/ds_screen_inset"
+        android:paddingEnd="@dimen/ds_screen_inset"
+        android:paddingTop="@dimen/ds_space_section"
+        android:paddingBottom="@dimen/ds_screen_inset">
 
         <TextView
+            android:id="@+id/settingsTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/launcher_settings"
             android:textColor="#FFFFFFFF"
-            android:textSize="34sp" />
+            android:textSize="@dimen/ds_type_title" />
 
         <TextView
             android:layout_width="match_parent"

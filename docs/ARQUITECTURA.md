@@ -42,6 +42,16 @@ Implementados PersonalBackground (modo/fase y ciclo visible), DayPhase (horario 
 
 ## Consistencia y avisos opcionales
 
+Actualización 06 (01/11/2026): [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) y `design_tokens.xml` rigen el diseño nuevo. `TvDesign` comparte tipografía, lienzo, panel opaco, foco, selección y tiempos. `LumenArtwork` normaliza Inicio/biblioteca: vectores CC0 conocidos, otros recursos instalados y Xuper identificado por el nombre real antes de los alias. Esto actualiza la política de solo iconos instalados descrita en la iteración anterior.
+
+`NotificationsPanel` sustituye al diálogo central y queda bajo los controles, con viewport acotado y observador solo mientras está adjunto. Permiso exclusivamente manual y estado inicial apagado; iconos limitados a los grupos actuales, liberados al cerrar, sin historial persistente.
+
+`BackgroundStore` guarda una colección versionada de hasta 24 elementos, migrando las seis imágenes/importaciones anteriores. `BackgroundPolicy` valida horarios de 2–12 imágenes y orden de presentación. `BackgroundMedia` copia/valida archivos en un worker, prepara previews con caché de 4 MiB y permite terminar una importación necesaria durante la reconstrucción. Solo borra copias propias después de confirmar persistencia y verificar que ya no se usan. `BackgroundSettingsActivity` mantiene presentación y edición; `PersonalBackground` programa únicamente el siguiente límite o intervalo mientras Inicio es visible y revalida la hora al volver.
+
+`AerialBackdrop` mantiene un MediaPlayer visible y lo libera en pausa. `VideoStillCover` prepara una imagen del mismo vídeo y captura su propia SurfaceView, sin sondeo; cubre antes de liberar. Una apertura desde dock/biblioteca espera como máximo 96 ms para actualizar el fotograma y registra un dato numérico por apertura. No carga la primera foto de la colección ni aplica el antiguo fundido de 700 ms. Al regresar espera MEDIA_INFO_VIDEO_RENDERING_START antes de retirar la cubierta. Las ventanas de arranque y políticas DRM de terceros quedan fuera de su control.
+
+El modo 2D evita geometría del vidrio/hero ocultos, doble desplazamiento al bajar al catálogo y capas persistentes por tarjeta. Las capas explícitas quedan para efectos avanzados; el RecyclerView conserva dos filas de caché. La foto principal sigue hasta Full HD y el frost de 160×90 no reemplaza su detalle.
+
 InstalledArtwork sustituye la política de reemplazos: Inicio y biblioteca muestran recursos reales instalados con una misma ruta de carga. FrostedControlDrawable comparte la miniatura difuminada del fondo y pinta una base opaca antes del tinte, evitando transparentar tarjetas detrás de los paneles. ControlCenterDialog separa seis accesos con texto y cuatro segmentos agrupados en dos cápsulas de media anchura; conserva navegación explícita y apertura de ajustes oficiales, sin interruptores simulados.
 
 NativePanels valida actividades exportadas, habilitadas y accesibles. Google Home usa la acción encontrada y probada en el firmware TCL. El panel nativo de notificaciones exige STATUS_BAR_SERVICE y no se intenta abrir ni eludir. Mantener los paquetes Google TV launcherx y dreamx para restauración y funciones nativas.

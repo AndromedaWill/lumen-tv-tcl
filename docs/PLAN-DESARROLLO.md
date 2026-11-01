@@ -35,3 +35,10 @@ El primer APK B859 ya se instaló y abrió con autorización como una aplicació
 EC8011 ya se actualizó y abrió con autorización como una app normal, con Google TV verificado como HOME antes y después; véase ACTUALIZACION-TCL-EC8011.md. Sigue probar diseño/fondos/mando y medir rendimiento en la TCL con aprobación de cada lectura. El visor secundario de notificaciones está preparado pero apagado: acceso exclusivamente manual y medición de consumo activo antes de recomendarlo. No conceder permisos por ADB para adelantar esa prueba. Google Home se abrió con autorización; falta verificar el acceso desde el APK ordinario. No agregar nuevos efectos mientras se evalúa esta entrega.
 
 Después: corregir regresiones físicas, aprobar diseño y preparar una prueba independiente del selector oficial HOME_SETTINGS y restauración, conservando Google TV y los servicios nativos. Cualquier limpieza de paquetes continúa siendo otra auditoría reversible y otra aprobación, sin desactivar launcherx/dreamx ni componentes esenciales.
+
+
+## Hito local 06 y gobernanza visual
+
+Se amplía la galería a modos Fijo (imagen/vídeo), Horario (2–12 imágenes) y Presentación, manteniendo las seis imágenes iniciales. Primero validar edición por mando, importación real por selector, persistencia y liberación de vídeo en emulador. Los cambios importantes de diseño se muestran antes/después bajo [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md); ese documento rige las funciones futuras. No añadir nuevos efectos mientras se revisa esta entrega.
+
+Después de la validación local: aprobación visual y autorización independiente de actualización en la TCL. Allí repetir el caso de vídeo observado por el usuario y el paso dock/catálogo con medidas controladas. Las cifras del emulador no sustituyen esta puerta. Conservar EC8011 y sus datos como referencia. El cambio a Inicio principal, las notificaciones activas, HDMI y cualquier limpieza de paquetes siguen siendo pruebas separadas autorizadas.

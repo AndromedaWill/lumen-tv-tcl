@@ -59,6 +59,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         /** An app was just launched from a tile. */
         default void onAppOpened() { }
+        default void beforeAppLaunch(Runnable launch) { launch.run(); }
     }
 
     static final class Entry {
@@ -274,8 +275,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
             if (!seen.add(pkg + '\n' + label)) continue;
             // Match Library: installed icons, not older TV banner wordmarks or packaged replacements.
-            Drawable banner = null;
-            Drawable icon = InstalledArtwork.icon(ctx,ri);
+            String identity=String.valueOf(ri.loadLabel(pm));
+            Drawable icon = LumenArtwork.builtIn(pkg,identity)?null:InstalledArtwork.icon(ctx,ri);
+            Drawable banner = LumenArtwork.forApp(ctx,pkg,identity,icon);
             if (card != null) {
                 fresh.add(new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent));
             } else {
@@ -470,26 +472,25 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         Intent i = new Intent(Intent.ACTION_MAIN)
                 .setComponent(e.component)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NO_ANIMATION);
         // TV apps launch with the same leanback intent as from the stock launcher or the remote, so an app
         // already running resumes instead of restarting; only phone apps added from the library use plain MAIN.
         if (leanbackPackages.contains(e.pkg)) i.addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
         String action = launchActions.get(e.pkg);
         if (action != null) {
             Intent byAction = new Intent(action).setPackage(e.pkg)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NO_ANIMATION);
             if (ctx.getPackageManager().resolveActivity(byAction, 0) != null) i = byAction;
         }
-        try {
-            ctx.startActivity(i);
+        final Intent target=i;
+        Runnable open=()->{try {
+            ctx.startActivity(target);
             if (listener != null) listener.onAppOpened();
             if (cinematic) LastOpened.record(ctx, e.pkg);
-            if (advancedEffects && ctx instanceof Activity) {
-                ((Activity) ctx).overridePendingTransition(R.anim.app_open_enter, R.anim.app_open_exit);
-            }
         } catch (Exception ex) {
             Toast.makeText(ctx, ctx.getString(R.string.cant_open, e.label), Toast.LENGTH_SHORT).show();
-        }
+        }};
+        if(listener!=null)listener.beforeAppLaunch(open);else open.run();
     }
 
     @Override
@@ -606,7 +607,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** Lumen keeps compositor layers for its first two rows. Retain only these visible tiles. */
     private void updateLayer(Holder h) {
         int pos = h.getBindingAdapterPosition();
-        boolean retain = layersActive && animations && !reducedMotion && pos >= 0 && pos < dockSize * 2;
+        boolean retain = layersActive && advancedEffects && animations && !reducedMotion && pos >= 0 && pos < dockSize * 2;
         int type = retain ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE;
         if (h.card.getLayerType() != type) h.card.setLayerType(type, null);
     }

@@ -101,6 +101,7 @@ final class WallpaperPlayer {
                     return;
                 }
                 image.setImageBitmap(bitmap);
+                root.setTag(R.id.background_still,new android.graphics.drawable.BitmapDrawable(root.getResources(),bitmap));
                 displayed = next.getName();
                 if (!displayed.equals(previous) || changed == 0) {
                     preferences.edit().putString("image", displayed)

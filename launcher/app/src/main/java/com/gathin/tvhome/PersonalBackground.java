@@ -1,53 +1,71 @@
 package com.gathin.tvhome;
-
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences;
+import android.content.*;
+import android.os.*;
 import android.view.View;
+import android.widget.FrameLayout;
 import java.io.File;
-import java.time.LocalTime;
+import java.time.*;
+import java.util.*;
 
-/** Chooses a still source; decoding/blur remain owned by ScenicBackdropDrawable. */
+/** Visible-only scheduling/slideshow. Scenic owns image decode; Aerial owns the single video decoder. */
 final class PersonalBackground {
-    static final String PREFS="personal_background", SCHEDULE="schedule", FIXED="fixed", LEGACY="legacy";
+    static final String PREFS="personal_background",SCHEDULE="schedule",FIXED="fixed",LEGACY="legacy";
     static final String[] PHASES={"Alba","Amanecer","Día","Atardecer","Anochecer","Noche"};
     private final Activity activity;
     private final View root;
-    private String displayed="";
-    private boolean active;
     private final boolean motion;
-    private final BroadcastReceiver clock=new BroadcastReceiver(){
-        @Override public void onReceive(Context context,Intent intent){update();}
-    };
-    PersonalBackground(Activity activity,View root,boolean motion){this.activity=activity;this.root=root;this.motion=motion;}
+    private final Handler handler=new Handler(Looper.getMainLooper());
+    private final Runnable due=this::update;
+    private final Random random=new Random();
+    private boolean active;
+    private String displayed="";
+    private AerialBackdrop video;
+    private boolean usingLegacy;
+    private final BroadcastReceiver clock=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){update();}};
+    PersonalBackground(Activity a,View root,boolean motion){activity=a;this.root=root;this.motion=motion;}
     static SharedPreferences prefs(Context c){return c.getSharedPreferences(PREFS,0);}
-    static boolean legacy(Context c){return LEGACY.equals(prefs(c).getString("mode",SCHEDULE));}
+    static boolean legacy(Context c){return LEGACY.equals(BackgroundStore.load(c).mode);}
     static File imported(Context c,int phase){return new File(c.getFilesDir(),"personal-"+phase+".image");}
     void start(){
-        if(active)return;active=true;
-        IntentFilter f=new IntentFilter();f.addAction(Intent.ACTION_TIME_CHANGED);f.addAction(Intent.ACTION_TIMEZONE_CHANGED);
-        if(android.os.Build.VERSION.SDK_INT>=33)activity.registerReceiver(clock,f,Context.RECEIVER_NOT_EXPORTED);
-        else activity.registerReceiver(clock,f);
-        update();
+        if(active)return;active=true;IntentFilter f=new IntentFilter();f.addAction(Intent.ACTION_TIME_CHANGED);f.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+        if(Build.VERSION.SDK_INT>=33)activity.registerReceiver(clock,f,Context.RECEIVER_NOT_EXPORTED);else activity.registerReceiver(clock,f);
+        update();if(video!=null)video.resume();
     }
-    void stop(){if(active){active=false;activity.unregisterReceiver(clock);}ScenicBackdropDrawable.stop(root);}
+    void stop(){handler.removeCallbacks(due);if(active){active=false;activity.unregisterReceiver(clock);}if(video!=null)video.pause();if(!usingLegacy&&ScenicBackdropDrawable.cancelPending(root))displayed="";ScenicBackdropDrawable.stop(root);}
+    void close(){stop();if(video!=null){video.close();video=null;}}
+    void beforeAppLaunch(Runnable launch){if(video!=null)video.beforeAppLaunch(launch);else launch.run();}
     void update(){
-        if(!active)return;
-        SharedPreferences p=prefs(activity);String mode=p.getString("mode",SCHEDULE);
-        if(LEGACY.equals(mode))return;
-        LocalTime now=LocalTime.now();int phase=FIXED.equals(mode)?p.getInt("phase",2):DayPhase.atMinute(now.getHour()*60+now.getMinute());
-        phase=Math.max(0,Math.min(5,phase));File file=imported(activity,phase);
-        String key=phase+":"+(file.isFile()?file.lastModified():"bundled");
-        if(key.equals(displayed))return;
-        displayed=key;
-        ScenicBackdropDrawable.Source source;
-        if(file.isFile())source=()->new java.io.FileInputStream(file);
-        else {String asset="personal/"+(phase+1)+".jpg";android.content.res.Resources resources=activity.getResources();android.content.res.AssetManager assets=resources.getAssets();source=()->{
-            try{return assets.open(asset);}catch(java.io.IOException missing){return resources.openRawResource(R.raw.hercules);}
-        };}
-        ScenicBackdropDrawable.load(activity,root,source,false,motion&&!p.getBoolean("no_transition",false));
+        if(!active)return;handler.removeCallbacks(due);BackgroundStore s=BackgroundStore.load(activity);usingLegacy=LEGACY.equals(s.mode);if(usingLegacy)return;
+        BackgroundStore.Item selected=s.find(s.fixed);long delay=0;
+        if(BackgroundStore.SCHEDULE.equals(s.mode)){
+            List<BackgroundStore.Item> images=s.images(true);
+            try{
+                ZonedDateTime now=ZonedDateTime.now();selected=images.get(BackgroundPolicy.scheduledIndex(BackgroundStore.starts(images),now.getHour()*60+now.getMinute()));
+                delay=Long.MAX_VALUE;
+                for(BackgroundStore.Item x:images){ZonedDateTime next=now.toLocalDate().atTime(LocalTime.of(x.minute/60,x.minute%60)).atZone(now.getZone());if(!next.isAfter(now))next=next.plusDays(1);delay=Math.min(delay,Duration.between(now,next).toMillis());}
+            }catch(IllegalArgumentException invalid){selected=images.isEmpty()?selected:images.get(0);}
+        }else if(BackgroundStore.SLIDESHOW.equals(s.mode)){
+            List<BackgroundStore.Item> images=s.images(false);android.content.SharedPreferences state=BackgroundStore.prefs(activity);
+            String id=state.getString("slide_id","");int index=-1;for(int i=0;i<images.size();i++)if(images.get(i).id.equals(id))index=i;
+            long now=System.currentTimeMillis(),at=state.getLong("slide_changed",0),interval=s.intervalSeconds*1000L;
+            if(images.size()==1)selected=images.get(0);
+            else if(!images.isEmpty()){
+                if(index<0||at>now||now-at>=interval){index=BackgroundPolicy.nextIndex(index,images.size(),s.random,random);at=now;state.edit().putString("slide_id",images.get(index).id).putLong("slide_changed",at).apply();}
+                selected=images.get(index);delay=Math.max(100,interval-(now-at));
+            }
+        }
+        if(delay>0&&delay!=Long.MAX_VALUE)handler.postDelayed(due,Math.max(100,delay));
+        if(selected==null)return;File file=BackgroundStore.file(activity,selected);
+        String key=selected.id+":"+selected.source+":"+(file==null?0:file.lastModified());
+        if(key.equals(displayed))return;displayed=key;
+        if(video!=null){video.close();video=null;}
+        if(selected.video){
+            ScenicBackdropDrawable.cancelPending(root);
+            if(root instanceof FrameLayout){video=AerialBackdrop.attachFile(activity,(FrameLayout)root,0,file);if(video!=null)video.resume();}
+        }else{
+            Context app=activity.getApplicationContext();BackgroundStore.Item image=selected;
+            ScenicBackdropDrawable.load(activity,root,()->BackgroundStore.open(app,image),false,motion&&s.transitions);
+        }
     }
 }

@@ -23,6 +23,7 @@ final class ControlCenterDialog extends Dialog {
     private final Runnable inputs, customize, notifications;
     private final boolean motion;
     private TextView compactLabel;
+    private NotificationsPanel notificationPanel;
     private final java.util.List<View> controls = new java.util.ArrayList<>();
 
     ControlCenterDialog(Activity activity, Runnable inputs, Runnable customize, Runnable notifications, boolean motion) {
@@ -41,11 +42,9 @@ final class ControlCenterDialog extends Dialog {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(14), dp(12), dp(14), dp(12));
+        panel.setPadding(dp(14), dp(6), dp(14), dp(6));
         panel.setClipChildren(false);
         panel.setClipToPadding(false);
-        TextView title = text(R.string.control_center, 21, Color.WHITE);
-        panel.addView(title);
         LinearLayout row = row(panel);
         add(row, R.drawable.ic_settings, R.string.control_tv, R.string.control_native,
                 () -> launch(Settings.ACTION_SETTINGS));
@@ -60,8 +59,9 @@ final class ControlCenterDialog extends Dialog {
                 ()->NativePanels.open(activity,NativePanels.HOME));
         add(row,R.drawable.ic_bell,R.string.control_notifications,
                 HomeNotificationService.enabled(activity)?R.string.notification_local_viewer:R.string.notification_optional,
-                notifications);
-        row=row(panel);
+                this::focusNotifications);
+        controls.get(5).setOnClickListener(v->focusNotifications());
+        row=row(panel,38);
         LinearLayout pair=pair(row);
         addCompact(pair,R.drawable.ic_volume,R.string.control_sound,()->launch(Settings.ACTION_SOUND_SETTINGS));
         addCompact(pair,R.drawable.ic_picture,R.string.control_picture,()->launch(Settings.ACTION_DISPLAY_SETTINGS));
@@ -69,7 +69,9 @@ final class ControlCenterDialog extends Dialog {
         addCompact(pair,R.drawable.ic_bluetooth,R.string.control_bluetooth,()->launch(Settings.ACTION_BLUETOOTH_SETTINGS));
         addCompact(pair,R.drawable.ic_apps,R.string.control_apps,()->launch(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
         compactLabel=text(R.string.control_sound,12,0xFFDBE5F2);compactLabel.setGravity(Gravity.CENTER);compactLabel.setAlpha(0);
-        panel.addView(compactLabel,new LinearLayout.LayoutParams(-1,dp(20)));
+        panel.addView(compactLabel,new LinearLayout.LayoutParams(-1,dp(16)));
+        notificationPanel=new NotificationsPanel(activity,notifications);
+        LinearLayout.LayoutParams noticeParams=new LinearLayout.LayoutParams(-1,-2);noticeParams.topMargin=dp(6);panel.addView(notificationPanel,noticeParams);
         int[][] positions={{0,1},{2,3},{4,5},{6,7,8,9}};
         for(int r=0;r<positions.length;r++)for(int col=0;col<positions[r].length;col++){
             int[] here=positions[r];View v=controls.get(here[col]);
@@ -82,7 +84,12 @@ final class ControlCenterDialog extends Dialog {
                 if(direction<0)v.setNextFocusUpId(id);else v.setNextFocusDownId(id);
             }
         }
-        setContentView(panel);
+        android.widget.ScrollView scroll=new android.widget.ScrollView(activity){
+            @Override protected void onMeasure(int width,int height){
+                int available=Math.max(dp(180),Math.round(activity.getResources().getDisplayMetrics().heightPixels*806f/1080f)-dp(96));
+                super.onMeasure(width,View.MeasureSpec.makeMeasureSpec(available,View.MeasureSpec.AT_MOST));
+            }
+        };scroll.setVerticalScrollBarEnabled(false);scroll.addView(panel);setContentView(scroll);
         controls.get(0).requestFocus();
     }
 
@@ -95,22 +102,22 @@ final class ControlCenterDialog extends Dialog {
         WindowManager.LayoutParams params = w.getAttributes();
         params.gravity = Gravity.TOP | Gravity.END;
         params.x = dp(40);
-        params.y = dp(54);
-        params.width = dp(356);
+        params.y = dp(88);
+        params.width = dp(330);
         params.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        params.dimAmount = .65f;
+        params.dimAmount = TvDesign.dim(activity);
         w.setAttributes(params);
     }
 
     private LinearLayout row(LinearLayout panel) {
-        return row(panel,52);
+        return row(panel,44);
     }
     private LinearLayout row(LinearLayout panel,int heightDp) {
         LinearLayout row = new LinearLayout(activity);
         row.setClipChildren(false);
         row.setClipToPadding(false);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(heightDp));
-        lp.topMargin = dp(6);
+        lp.topMargin = dp(5);
         panel.addView(row, lp);
         return row;
     }
@@ -147,25 +154,27 @@ final class ControlCenterDialog extends Dialog {
         labels.setOrientation(LinearLayout.VERTICAL);
         TextView name = text(title, 13, Color.WHITE);
         name.setSingleLine(true);
-        name.setEllipsize(motion?android.text.TextUtils.TruncateAt.MARQUEE:android.text.TextUtils.TruncateAt.END);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         name.setMarqueeRepeatLimit(-1);
         labels.addView(name);
         TextView sub = text(subtitle, 11, 0xFFBAC3D4);
         sub.setSingleLine(true);
-        sub.setEllipsize(motion?android.text.TextUtils.TruncateAt.MARQUEE:android.text.TextUtils.TruncateAt.END);
+        sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
         sub.setMarqueeRepeatLimit(-1);
         labels.addView(sub);
         tile.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         tile.setOnFocusChangeListener((v, focused) -> {
             if(focused && compactLabel!=null)compactLabel.setAlpha(0);
             tile.setBackground(new FrostedControlDrawable(activity, tile, focused));
+            name.setEllipsize(focused&&motion?android.text.TextUtils.TruncateAt.MARQUEE:android.text.TextUtils.TruncateAt.END);
+            sub.setEllipsize(focused&&motion?android.text.TextUtils.TruncateAt.MARQUEE:android.text.TextUtils.TruncateAt.END);
             name.setSelected(focused&&motion);
             sub.setSelected(focused&&motion);
             name.setTextColor(focused ? 0xFF182133 : Color.WHITE);
             sub.setTextColor(focused ? 0xFF45546C : 0xFFBAC3D4);
             glyph.setColorFilter(focused ? 0xFF233C61 : 0xFFF2F4FB);
             v.animate().cancel();
-            if (motion) v.animate().scaleX(focused ? 1.035f : 1).scaleY(focused ? 1.035f : 1).setDuration(160).start();
+            if (motion) v.animate().scaleX(focused ? 1.035f : 1).scaleY(focused ? 1.035f : 1).setDuration(TvDesign.focusDuration(activity)).start();
         });
         tile.setOnClickListener(v -> { dismiss(); action.run(); });
         controls.add(tile);
@@ -195,7 +204,7 @@ final class ControlCenterDialog extends Dialog {
             glyph.setColorFilter(focused?0xFF233C61:0xFFF2F4FB);
             if(compactLabel!=null){compactLabel.setText(title);compactLabel.setAlpha(focused?1:0);}
             v.animate().cancel();
-            if(motion)v.animate().scaleX(focused?1.025f:1).scaleY(focused?1.025f:1).setDuration(140).start();
+            if(motion)v.animate().scaleX(focused?1.025f:1).scaleY(focused?1.025f:1).setDuration(TvDesign.focusDuration(activity)).start();
         });
         tile.setOnClickListener(v->{dismiss();action.run();});controls.add(tile);
     }
@@ -205,5 +214,17 @@ final class ControlCenterDialog extends Dialog {
         catch (ActivityNotFoundException | SecurityException e) {
             Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
         }
+    }
+    void focusNotifications(){if(notificationPanel!=null)notificationPanel.focusFirst();}
+    @Override public boolean dispatchKeyEvent(android.view.KeyEvent event){
+        if(event.getAction()==android.view.KeyEvent.ACTION_DOWN&&event.getKeyCode()==android.view.KeyEvent.KEYCODE_DPAD_DOWN){
+            for(int i=6;i<controls.size();i++)if(controls.get(i).hasFocus()){focusNotifications();return true;}
+        }
+        return super.dispatchKeyEvent(event);
+    }
+    @Override public void onBackPressed(){
+        if(notificationPanel!=null&&notificationPanel.hasFocus()){
+            if(!notificationPanel.back())controls.get(5).requestFocus();
+        }else super.onBackPressed();
     }
 }
