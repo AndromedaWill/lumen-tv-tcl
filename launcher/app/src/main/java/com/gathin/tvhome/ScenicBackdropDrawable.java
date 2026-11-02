@@ -8,7 +8,7 @@ import android.view.View;
 
 /** Offline background plus Lumen-style lower veil. Decode, crop, tint and blur once off UI. */
 final class ScenicBackdropDrawable extends Drawable {
-    private final Bitmap photo, frost;
+    private final Bitmap photo, frost, neutralFrost;
     private final Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
     private final RectF destination = new RectF();
     private boolean lower;
@@ -18,7 +18,7 @@ final class ScenicBackdropDrawable extends Drawable {
     private float appear=1;
     private ValueAnimator crossfade;
     interface Source { java.io.InputStream open() throws java.io.IOException; }
-    private ScenicBackdropDrawable(Bitmap photo, Bitmap frost) { this.photo=photo; this.frost=frost; }
+    private ScenicBackdropDrawable(Bitmap photo, Bitmap frost,Bitmap neutralFrost) { this.photo=photo; this.frost=frost;this.neutralFrost=neutralFrost; }
 
     private static final class LoadTicket {
         volatile boolean cancelled;
@@ -44,7 +44,7 @@ final class ScenicBackdropDrawable extends Drawable {
         new Thread(() -> prepare(resources,width,height,ticket,input,legacyTint,animate),"home-photo-prepare").start();
     }
     private static void prepare(android.content.res.Resources resources, int width, int height, LoadTicket ticket, Source input, boolean legacyTint, boolean animate) {
-        Bitmap source=null,photo=null,frost=null;
+        Bitmap source=null,photo=null,frost=null,neutral=null;
         try {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
             long started=android.os.SystemClock.elapsedRealtimeNanos();
@@ -86,7 +86,12 @@ final class ScenicBackdropDrawable extends Drawable {
             blur(frost);
             blurred.drawColor(0x42000000);
             long blurredAt=android.os.SystemClock.elapsedRealtimeNanos();
-            photo.prepareToDraw();frost.prepareToDraw();
+            // Neutral glass samples only the tiny frost, preserving the original photograph's colour.
+            neutral=Bitmap.createBitmap(160,90,Bitmap.Config.ARGB_8888);
+            ColorMatrix grey=new ColorMatrix();grey.setSaturation(0);ColorMatrix shade=new ColorMatrix();shade.setScale(.72f,.72f,.72f,1);grey.postConcat(shade);
+            Paint neutralBrush=new Paint(Paint.FILTER_BITMAP_FLAG);neutralBrush.setColorFilter(new ColorMatrixColorFilter(grey));
+            new Canvas(neutral).drawBitmap(frost,0,0,neutralBrush);
+            photo.prepareToDraw();frost.prepareToDraw();neutral.prepareToDraw();
             long prepared=android.os.SystemClock.elapsedRealtimeNanos();
             long workerCpu=android.os.Debug.threadCpuTimeNanos()-cpuStarted;
             if(ticket.cancelled)return;
@@ -96,23 +101,23 @@ final class ScenicBackdropDrawable extends Drawable {
                     +" decodeMs="+((decoded-decodeStarted)/1e6)+" blurMs="+((blurredAt-blurStarted)/1e6)+" bitmapPrepMs="+((prepared-blurredAt)/1e6)
                     +" prepareMs="+((prepared-started)/1e6)+" workerCpuMs="+(workerCpu/1e6)
                     +" sourceBitmapBytes="+sourceBytes
-                    +" backgroundCpuBitmapBytes="+(photo.getAllocationByteCount()+frost.getAllocationByteCount())
+                    +" backgroundCpuBitmapBytes="+(photo.getAllocationByteCount()+frost.getAllocationByteCount()+neutral.getAllocationByteCount())
                     +" blurScratchArrayBytes="+(160*90*4*2));
-            Bitmap readyPhoto=photo,readyFrost=frost;
+            Bitmap readyPhoto=photo,readyFrost=frost,readyNeutral=neutral;
             boolean queued=new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                 Activity owner=ticket.owner.get(); View view=ticket.view.get();
                 if(ticket.cancelled || owner==null || owner.isFinishing() || owner.isDestroyed()
                         || view==null || view.getTag(R.id.backdrop_load_job)!=ticket) {
-                    readyPhoto.recycle();readyFrost.recycle();return;
+                    readyPhoto.recycle();readyFrost.recycle();readyNeutral.recycle();return;
                 }
                 view.setTag(R.id.backdrop_load_job,null);
-                ScenicBackdropDrawable drawable=new ScenicBackdropDrawable(readyPhoto,readyFrost);
+                ScenicBackdropDrawable drawable=new ScenicBackdropDrawable(readyPhoto,readyFrost,readyNeutral);
                 Drawable old=view.getBackground();
                 view.setBackground(drawable);
                 drawable.setLower(Boolean.TRUE.equals(view.getTag(R.id.grid)),false);
                 if(animate && owner.hasWindowFocus())drawable.appearFrom(old);
             });
-            if(queued){photo=null;frost=null;} // Ownership moves to UI; never recycle published bitmaps.
+            if(queued){photo=null;frost=null;neutral=null;} // Ownership moves to UI; never recycle published bitmaps.
         } catch(java.io.IOException | RuntimeException | OutOfMemoryError failure) {
             android.util.Log.w("TCLHomePerf","background prepareFailed="+failure.getClass().getSimpleName());
             // The existing HorizonDrawable remains visible, rather than attaching an empty image.
@@ -120,6 +125,7 @@ final class ScenicBackdropDrawable extends Drawable {
             if(source!=null)source.recycle();
             if(photo!=null)photo.recycle();
             if(frost!=null)frost.recycle();
+            if(neutral!=null)neutral.recycle();
         }
     }
     static void dispose(View root) {
@@ -200,7 +206,7 @@ final class ScenicBackdropDrawable extends Drawable {
         crossfade.start();
     }
     private void finishCrossfade(){if(crossfade!=null){crossfade.cancel();crossfade=null;}previous=null;appear=1;}
-    void drawFrost(Canvas canvas) { paint.setAlpha(255);canvas.drawBitmap(frost,null,destination,paint); }
+    void drawFrost(Canvas canvas,int opacity) { paint.setAlpha(opacity);canvas.drawBitmap(neutralFrost,null,destination,paint);paint.setAlpha(255); }
     @Override public void draw(Canvas canvas) {
         destination.set(getBounds());
         if(previous!=null && appear<1){

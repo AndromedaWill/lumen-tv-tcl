@@ -23,7 +23,7 @@ public class GlassView extends View {
         setAccent(0);
     }
 
-    void setAccent(int argb) { marker.setColor(argb == 0 ? 0xFF9BBFE8 : argb); invalidate(); }
+    void setAccent(int argb) { marker.setColor(argb == 0 ? getContext().getColor(R.color.ds_accent) : argb); invalidate(); }
     void setRadius(float px) { radius = px; invalidate(); }
 
     @Override protected void onDraw(Canvas canvas) {

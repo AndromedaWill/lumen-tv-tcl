@@ -1,12 +1,12 @@
 # TCL Home · sistema de diseño v1
 
-Estado: implementación de desarrollo, pendiente de aprobación visual del usuario y de una nueva prueba autorizada en la TCL. Revisión: 1 de noviembre de 2026. A partir de esta versión, las funciones nuevas deben usar estos componentes y justificar cualquier excepción.
+Estado: implementación de desarrollo, con refinamiento neutral solicitado después de revisar las primeras capturas; pendiente de aprobación visual y de una nueva prueba autorizada en la TCL. Revisión: 1 de noviembre de 2026. A partir de esta versión, las funciones nuevas deben usar estos componentes y justificar cualquier excepción.
 
 ## Alcance y evidencia
 
 Android TV con Views/Java, API mínima 26 y objetivo 34; mando D-pad, OK y Atrás. Referencia visual tvOS 26, interacción y ciclo de vida Android. No es una certificación de conformidad con HIG ni una reproducción de SystemUI.
 
-Capturas **reales**, sin retocar: `artifacts/design-system/before/{1080,720}/` y `after/{1080,720}/`. Cada carpeta incluye Inicio, Fondos, Calendario, Personalizar, Centro de control y el estado desactivado de notificaciones. Los pares `focused/resting`, `next/previous` y `controls/preview` cambian el foco; siempre debe existir un foco activo en televisión. `capture.json` registra el emulador y la resolución. Los iconos de Archivos, Cine y Colección pertenecen a fixtures identificados de prueba, no a aplicaciones de la TCL.
+Capturas **reales**, sin retocar: `artifacts/design-system/before/{1080,720}/`, `refinement-before/{1080,720}/` y `after/{1080,720}/`. La segunda colección conserva la propuesta previa a la petición de más transparencia; la última es el refinamiento neutral. Cada carpeta incluye Inicio, Fondos, Calendario, Personalizar, Centro de control y notificaciones apagadas. Los pares `focused/resting`, `next/previous` y `controls/preview` cambian el foco; siempre debe existir un foco activo en televisión. Las capturas finales registran también el SHA-256 del APK instalado (C49EC0AE8566…, 22 estados entre ambas resoluciones). Los iconos de Archivos, Cine y Colección pertenecen a fixtures, no a aplicaciones de la TCL.
 
 ## Apple guidance
 
@@ -18,7 +18,7 @@ La alineación, los grupos y la revelación progresiva ayudan a entender las rel
 
 ## Inference
 
-La mezcla de un selector gris en Personalizar, botones luminosos en Fondos, calendario translúcido y avisos con otro relleno reduce la coherencia. Conviene compartir roles de superficie y foco, conservando las distribuciones que ya conoce el usuario. Una imagen con muchos detalles requiere una superficie más opaca detrás de información larga. El brillo de foco no debe invadir esquinas ni sustituir una indicación inequívoca de selección.
+La mezcla de selectores de distintos estilos reduce la coherencia. Conviene compartir material y foco, conservando las distribuciones conocidas. El usuario rechazó tanto los reflejos marrones como los paneles azul oscuro y la doble caja de avisos. La solución es un cristal neutro con menor cobertura del difuminado. Se evita aplicar un tinte cálido; puede seguir apreciándose el color natural de la fotografía por la transparencia. La segunda petición del usuario prioriza recuperar la transparencia inicial frente a una plancha gris opaca. El brillo de foco no debe invadir esquinas ni sustituir una indicación inequívoca de selección.
 
 ### Auditoría previa
 
@@ -26,11 +26,11 @@ La mezcla de un selector gris en Personalizar, botones luminosos en Fondos, cale
 |---|---|---|---|
 | Inicio, Runtime + Static | El dock ya tiene composición aceptada; iconos instalados cuadrados pueden crear otro marco interior. Hay fixtures en emulador. | P1 | Una sola fábrica de arte para Inicio y biblioteca; vectores nítidos de la referencia Lumen cuando existen, color a toda la tarjeta y logo centrado. No inventar que todos son iconos originales de Lumen. |
 | Fondos, Runtime | Título de 30sp frente a 34sp en Personalizar; controles y diálogos fabricados localmente. Vista previa y miniaturas ya aportan la jerarquía solicitada. | P2 | Título y controles compartidos; preservar vista previa grande, modos y colección. |
-| Calendario, Runtime + Static | Material fotográfico muy presente; mes, flechas y día actual usan reglas distintas de los controles. | P2 | Panel oscuro de información, misma fuente y foco de flechas; hoy mantiene un indicador diferente del foco. |
+| Calendario, Runtime + Static | Material fotográfico muy presente; mes, flechas y día actual usan reglas distintas de los controles. | P2 | Cristal neutro compartido, misma fuente y foco de flechas; hoy mantiene un indicador diferente del foco. |
 | Personalizar, Runtime | Filas de 52dp y título de 34sp; selector gris y margen de 72dp producen otra escala visual. | P2 | Título 28sp, filas 44dp, margen 36dp y controles comunes; marca ✓ para valor guardado, foco independiente. |
 | Centro de control, Runtime | El borde superior de los botones invade la zona de accesos redondos; tamaño y separaciones pueden compactarse. | P1 | Sin título, desplazamiento inferior y botones menores; pares de accesos con extremos redondeados; notificaciones debajo. |
-| Notificaciones, Runtime | Bloque gris grande y texto redundante «Configurar». | P2 | Superficie oscura compartida; estado compacto «Notificaciones desactivadas». OK revela la explicación y configuración. Sin avisos ficticios. |
-| Biblioteca, Runtime + Static | Necesita panel opaco e iconos idénticos a Inicio; el check hace redundante «En Inicio». | P2 | Panel de información y fábrica de arte compartidos, sin repetir el estado en texto. |
+| Notificaciones, Runtime | Bloque gris grande y texto redundante «Configurar». | P2 | Cristal compartido; estado compacto «Notificaciones desactivadas». OK revela la explicación y configuración. Sin avisos ficticios. |
+| Biblioteca, Runtime + Static | Necesitaba aislamiento del catálogo e iconos idénticos a Inicio; el check hace redundante «En Inicio». | P2 | Panel compartido, catálogo oculto mientras está abierto y fábrica de arte común, sin repetir el estado en texto. |
 | Apertura con vídeo, Runtime + Static | Se cargaba una fotografía ajena como respaldo y se mezclaba con el vídeo; la superficie desaparecía al liberar el decodificador. | P1 | Fotograma del mismo vídeo, captura acotada antes de abrir y cubierta antes de liberar. Sin fundido a una foto de la colección. |
 
 ## Project choice
@@ -41,25 +41,25 @@ La fuente de verdad de los valores es `launcher/app/src/main/res/values/design_t
 
 | Rol | Valor / regla |
 |---|---|
-| Lienzo | Gradiente oscuro `#182337` → `#0C111C`; el Inicio conserva la fotografía o vídeo elegido. |
-| Panel de información | `#1A2230` → `#0D131E`, opaco, borde tenue. Calendario, biblioteca, avisos y diálogos propios. |
-| Controles sobre foto | Cristal moderado con frost ya calculado de la foto; no desenfoque en vivo por botón. |
-| Texto | Principal `#F4F6FC`, secundario `#BAC6D8`, enfocado `#182133`. |
-| Foco de acción | Relleno `#EDF3FC`, texto oscuro; elevación discreta donde ya existe. Nunca un halo blanco exterior. |
-| Selección persistente | `#283F58` y marca ✓; no confundir el valor guardado con el control enfocado. |
+| Lienzo | Gradiente carbón neutro `#202020` → `#111111`; Inicio conserva la fotografía o vídeo elegido. |
+| Panel de información | Cristal neutro y borde tenue. Calendario, biblioteca y diálogos comparten material; no hay planchas azul oscuro. |
+| Controles sobre foto | Cristal con frost de la foto **desaturado y atenuado una vez en el worker**, compartido y dibujado al 96/255 de alpha. El tinte neutro usa 74/255 de alpha; la foto puede percibirse a través del material. No hay blur en vivo ni filtro de color por botón. |
+| Texto | Principal `#F5F5F5`, secundario `#D2D2D2`, enfocado `#202020`. |
+| Foco de acción | Blanco suavemente translúcido `#D4F4F4F4`, texto oscuro; elevación discreta donde ya existe. Nunca un halo blanco exterior. |
+| Selección persistente | Gris translúcido `#30545454` y marca ✓; no confundir el valor guardado con el control enfocado. |
 | Escala tipográfica | Título 28sp, sección 20sp, cuerpo 16sp, control 14sp, compacto 13sp, metadatos 12sp. Reloj y cifras del editor son roles de exhibición existentes, no títulos de pantalla. |
 | Ritmo | Unidad 4dp; separaciones 8 / 16 / 24dp; margen de pantalla 36dp. Excepciones compactas del dock y grupos documentadas en sus componentes. |
 | Geometría | Control rectangular redondeado 16dp; panel 22dp; cápsula limitada a la mitad de la altura. Arte 5:3/16:9 según su contenedor, sin deformar logos. |
 | Tamaño de acciones | Filas generales 44dp; Centro de control 44dp y segmentos 38dp. Son controles por mando, no objetivos táctiles de móvil. Fondos conserva acciones de 34dp en su columna densa y no cambia su organización. |
 | Movimiento | Foco 160ms, panel 240ms; escala solo de composición, sin relayout. La transición propia al abrir otra app se omite para evitar fundidos negros del launcher. |
-| Aislamiento modal | Oscurecimiento 65%; contenido informativo opaco. No procesar capturas del televisor para producir blur. |
+| Aislamiento modal | Oscurecimiento local 65%. Un diálogo conserva visible y estable la pantalla que lo originó; se atenúa mediante la ventana, sin ocultar controles ni modificar sus alphas. No procesar capturas del televisor para producir blur. La biblioteca tiene un tratamiento de catálogo específico, no reutilizable para diálogos. |
 
 ### Componentes compartidos
 
-- `TvDesign`: tipografía, lienzo, panel de información, estados de controles, selección y tiempos. Usarlo antes de crear colores, drawables o listeners equivalentes en una pantalla nueva.
+- `TvDesign`: tipografía, lienzo, panel de información de cristal neutro, estados de controles, selección y tiempos. Usarlo antes de crear colores, drawables o listeners equivalentes en una pantalla nueva.
 - `FrostedControlDrawable` / `LiquidGlassDrawable`: un solo tratamiento de cristal, borde y foco; reutilizan el frost de 160×90 de Scenic. No recrear bloom o blur por tarjeta.
 - `LumenArtwork` / `AppIdentity`: composición consistente entre dock y biblioteca, logos con proporciones correctas y detección de Xuper prioritaria al nombre heredado de un paquete Magis. El símbolo de Xuper es una interpretación propia, no un logotipo oficial certificado.
-- `NotificationsPanel`: contenido compacto dentro del Centro de control; permiso y contenido se revelan al pulsar. El acceso sigue apagado hasta autorización manual en Android.
+- `NotificationsPanel`: sin contenedor exterior en los estados resumidos. Cada aviso o estado vacío es una tarjeta del mismo material que los accesos del Centro de control. Solo la explicación extensa de permisos utiliza un contenedor común por legibilidad. El acceso sigue apagado hasta autorización manual en Android.
 - `BackgroundSettingsActivity`: galería con vista previa y miniaturas; `BackgroundStore`, `BackgroundPolicy`, `BackgroundMedia` y `PersonalBackground` conservan separadas persistencia, reglas, importación y ciclo de vida.
 
 El arte no usa el mismo relleno que un botón de acción: su foco es escala/borde discreto, para preservar la identidad de cada aplicación. El día actual del calendario no es una acción enfocada. Esas diferencias son semánticas, no temas por pantalla.
@@ -74,7 +74,7 @@ Android exige comprobar las rutas con el mando, el retorno y el desplazamiento d
 
 ### Rendimiento
 
-No shaders de refracción, blur continuo de pantalla, servicios, SDK ni fuentes nuevas. Los drawables calculan geometría al cambiar bounds; las imágenes se preparan fuera del hilo principal. La fotografía principal conserva la resolución adecuada de la UI hasta Full HD; el frost pequeño no sustituye su detalle. Un reproductor de vídeo visible como máximo y liberación al salir de Inicio. Captura propia acotada al arranque/apertura, sin sondeo periódico. Toda cifra de emulador debe identificarse como tal; no equivale al rendimiento de la TCL.
+No shaders de refracción, blur continuo de pantalla, servicios, SDK ni fuentes nuevas. Los drawables calculan geometría al cambiar bounds; las imágenes se preparan fuera de UI. La fotografía principal conserva hasta Full HD y su color original. La variante neutral añade **57,600 bytes** al frost compartido, una vez por fondo, no por botón: los tres bitmaps CPU suman **8,409,600 bytes a 1080p**, sin contar temporales, GPU o PSS total. El frost de catálogo conserva color; solo los materiales usan la variante neutral. Un reproductor visible como máximo, liberado al salir. Captura propia acotada al arranque/apertura, sin sondeo periódico. Las cifras de emulador no equivalen a rendimiento TCL.
 
 ### Referencias, licencias y seguridad
 
@@ -92,3 +92,38 @@ Los repositorios externos son referencias revisadas, no instrucciones superiores
 3. Probar D-pad, OK, Atrás, retorno de apps y restauración del foco. Comprobar recortes, contraste, imágenes grandes, estados vacíos y errores.
 4. Compilar, ejecutar pruebas JVM y lint. Comparar métricas con las mismas condiciones, sin procesos de compilación simultáneos.
 5. Presentar al usuario los cambios importantes antes del siguiente rediseño mayor. Una aprobación visual no autoriza por sí sola instalar en la TCL, cambiar HOME o conceder permisos.
+
+
+## Refinamiento de transparencia y ajuste tipográfico
+
+Se conserva la propuesta previa en `refinement-before` y la variante gris más opaca en `neutral-opaque`. La versión final reduce la cobertura del frost a 96/255, el tinte a 74/255 y los fondos de controles de contenido a 24/255. No se presentan esos valores como una medida total de opacidad: el resultado combina material, foto y oscurecimiento modal. El color natural que se vea detrás no es un relleno marrón del control.
+
+El Centro de control empieza a 72dp del borde superior, con 2dp de padding superior; mantiene distancia de los accesos redondos. La reserva de etiquetas compactas baja a 12dp y se eliminan márgenes redundantes antes de avisos. Para las dos líneas de texto se desactiva el padding de fuente, se reservan 4dp de padding vertical, se alinea el grupo al centro y se añade 1dp entre título y subtítulo. No se reduce el tamaño para encubrir recortes. «Ajustes nativos» sustituye al texto largo anterior. Los textos que realmente excedan el ancho usan elipsis en reposo y desplazamiento al enfocar.
+
+
+### Calendario y revisión de los demás menús
+
+El calendario se ancla a 80dp desde arriba, manteniendo su centro horizontal y tamaño. A seis columnas, las capturas comprueban separación del dock a 720p y 1080p. Se aumenta ligeramente la cobertura neutra del cristal a 74/255 y se recupera el oscurecimiento modal del 65% de la primera propuesta. El frost conserva alpha 96/255: se evita volver a una plancha gris opaca.
+
+La paleta de superficies, rellenos, texto enfocado, bordes y acento es acromática. También se revisaron `LiquidGlassDrawable.Panel` (menús de opciones/entradas), `GlassView` (foco de biblioteca y edición), selectores XML, filas de entradas, QuickSettingsActivity y los AlertDialog propios. Los diálogos de la app comparten fuente, fondo neutral y botones de foco claro. Verde queda reservado al estado de fijado; los colores de marca de cada aplicación se conservan. HomeSettingsActivity solo abre la pantalla oficial y no tiene una interfaz propia que retocar. Los ajustes TCL, el selector de documentos, el teclado y las autorizaciones Android conservan su diseño nativo.
+
+Se archiva `pre-calendar-fix` para comparar exactamente la composición previa al ajuste de altura. Las limitaciones de validación siguen vigentes: los estados con permiso activo de notificaciones y el firmware físico requieren una prueba independiente autorizada.
+
+
+La revisión real de la biblioteca detectó que el cristal dejaba distinguir las tarjetas del catálogo de Inicio detrás de las del panel. Se oculta únicamente el dibujo del RecyclerView de Inicio (`alpha=0`) mientras está abierto el PopupWindow y se restaura su alpha anterior **antes** de devolver el foco al cerrar. Se conserva layout, selección y scroll; no hay captura ni bitmap nuevo. Así la biblioteca comparte el material, mostrando el wallpaper difuminado que ya había detrás, sin duplicar iconos. El modal usa también el oscurecimiento compartido del 65%.
+
+
+La propuesta que ocultaba los controles detrás de los diálogos de Fondos y Personalizar fue rechazada por el usuario y se retiró. No queda un helper general que cambie alpha, visibility o layout de la pantalla base al abrir un modal. Se conserva el contenido completo con el oscurecimiento compartido de la ventana (65%). La transparencia no justifica eliminar el contexto de navegación.
+
+### Auditoría de visibilidad tras esa corrección
+
+| Flujo | Comportamiento permitido | Verificación |
+|---|---|---|
+| Fondos y sus opciones/confirmaciones | La galería completa permanece detrás, sin modificar alpha/visibility; Atrás cierra el nivel activo. | Capturas y recorrido D-pad 720p/1080p. |
+| Personalizar y sus AlertDialog | Los controles de la pantalla base permanecen visibles bajo el oscurecimiento de ventana. | Capturas, cancelación y foco de retorno. |
+| Calendario y Centro de control | Mantienen Inicio y dock detrás, sin cambiar el dibujo del contenido base. | Capturas de ambas resoluciones y revisión de código. |
+| Notificaciones | Solo cambia el estado propio: apagadas, explicación o avisos actuales; no elimina controles del Centro de control. | Estado apagado y explicación comprobados; acceso activo pendiente. |
+| Biblioteca de gestión | Sustituye visualmente el catálogo duplicado, conservando el wallpaper difuminado y restaurando el dibujo/foco al salir. | Excepción específica al requerimiento previo de no ver apps duplicadas a través de la biblioteca; no extender a otros menús. |
+| Inicio | Hero/efectos opcionales solo se ocultan por configuración 2D; el saludo se desvanece según lo solicitado. | No son reglas de ocultación de modales. |
+
+Los fades de entrada de un panel y los indicadores de foco parten de alpha cero y terminan visibles; no equivalen a suprimir la pantalla inferior. No se presenta esa distinción como una certificación HIG: son contratos verificables de este proyecto.

@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Project choices adapted to Android TV, not Apple platform measurements. -->
 <resources>
-    <color name="ds_screen_top">#182337</color>
-    <color name="ds_screen_bottom">#0C111C</color>
-    <color name="ds_panel_top">#1A2230</color>
-    <color name="ds_panel_bottom">#0D131E</color>
-    <color name="ds_text_primary">#F4F6FC</color>
-    <color name="ds_text_secondary">#BAC6D8</color>
-    <color name="ds_text_focused">#182133</color>
-    <color name="ds_focus_fill">#EDF3FC</color>
-    <color name="ds_glass_fill">#68141A25</color>
-    <color name="ds_control_fill">#141C27</color>
-    <color name="ds_selected_fill">#FF283F58</color>
-    <color name="ds_rim">#667D8FA7</color>
-    <color name="ds_accent">#B9DCF4</color>
+    <color name="ds_screen_top">#202020</color>
+    <color name="ds_screen_bottom">#111111</color>
+    <color name="ds_text_primary">#F5F5F5</color>
+    <color name="ds_text_secondary">#D2D2D2</color>
+    <color name="ds_text_focused">#202020</color>
+    <color name="ds_focus_fill">#D4F4F4F4</color>
+    <color name="ds_glass_fill">#4A181818</color>
+    <color name="ds_glass_fallback">#40262626</color>
+    <color name="ds_control_fill">#18262626</color>
+    <color name="ds_selected_fill">#30545454</color>
+    <color name="ds_rim">#66909090</color>
+    <color name="ds_accent">#E0E0E0</color>
     <dimen name="ds_space_unit">4dp</dimen>
     <dimen name="ds_space_small">8dp</dimen>
     <dimen name="ds_space_medium">16dp</dimen>
@@ -22,6 +21,7 @@
     <dimen name="ds_control_height">44dp</dimen>
     <dimen name="ds_radius_control">16dp</dimen>
     <dimen name="ds_radius_panel">22dp</dimen>
+    <dimen name="ds_calendar_top">80dp</dimen>
     <dimen name="ds_type_title">28sp</dimen>
     <dimen name="ds_type_section">20sp</dimen>
     <dimen name="ds_type_body">16sp</dimen>
@@ -31,4 +31,5 @@
     <integer name="ds_motion_focus_ms">160</integer>
     <integer name="ds_motion_panel_ms">240</integer>
     <integer name="ds_modal_dim_percent">65</integer>
+    <integer name="ds_glass_sample_alpha">96</integer>
 </resources>

@@ -45,7 +45,7 @@ public class LiquidGlassDrawable extends Drawable {
     }
 
     public static class Panel extends LiquidGlassDrawable {
-        public Panel() { super(22f, 0xD0202633); }
+        public Panel() { super(22f, 0xA01C1C1C); }
     }
 
     @Override public void inflate(@NonNull Resources r, @NonNull XmlPullParser parser,
@@ -64,7 +64,7 @@ public class LiquidGlassDrawable extends Drawable {
         rim.setStyle(Paint.Style.STROKE);
         rim.setStrokeWidth(Math.max(1f, .65f * density));
         rim.setShader(new LinearGradient(b.left, b.top, b.right, b.bottom,
-                new int[]{0xC0D6F4FF, 0x28CBE8EF, 0x0CFFFFFF, 0x558B708F},
+                new int[]{0xB8FFFFFF, 0x30FFFFFF, 0x0CFFFFFF, 0x487B7B7B},
                 new float[]{0, .34f, .65f, 1}, Shader.TileMode.CLAMP));
         if(cornersDp!=null){
             float[] radii=new float[8];

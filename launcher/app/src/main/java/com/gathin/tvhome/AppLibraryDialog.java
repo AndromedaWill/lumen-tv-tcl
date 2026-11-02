@@ -68,6 +68,9 @@ final class AppLibraryDialog {
     private float scrollOffset;
     private boolean highlightShown;
     private final int catalogWidth;
+    private View homeGrid;
+    private float homeGridAlpha;
+    private boolean gridHidden;
 
     private void stopHighlight() {
         if (spring != null) spring.cancel();
@@ -119,7 +122,7 @@ final class AppLibraryDialog {
         panel.setLayoutDirection(rtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(12), dp(8), dp(12), dp(12));
-        panel.setBackground(TvDesign.panel(activity));
+        panel.setBackground(TvDesign.panel(activity,panel));
         View decor = activity.getWindow().getDecorView();
         catalogWidth = Math.min(dp(800), Math.max(dp(200), decor.getWidth() - dp(64)));
         int width = catalogWidth;
@@ -128,19 +131,22 @@ final class AppLibraryDialog {
         popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popup.setOutsideTouchable(true);
         popup.setAnimationStyle(0);
-        popup.setOnDismissListener(() -> { dismissActions(); stopHighlight(); dismissed.run(); });
+        popup.setOnDismissListener(() -> { dismissActions(); stopHighlight();if(gridHidden&&homeGrid!=null){homeGrid.setAlpha(homeGridAlpha);gridHidden=false;}dismissed.run(); });
     }
 
     void close() { dismissActions(); popup.dismiss(); }
 
     void show() {
+        if(popup.isShowing())return;
         refresh();
         popup.showAtLocation(activity.getWindow().getDecorView(), Gravity.CENTER, 0, 0);
+        homeGrid=activity.findViewById(R.id.grid);
+        if(homeGrid!=null){homeGridAlpha=homeGrid.getAlpha();homeGrid.setAlpha(0);gridHidden=true;}
         View container = panel.getRootView();
         if (container.getLayoutParams() instanceof WindowManager.LayoutParams) {
             WindowManager.LayoutParams params = (WindowManager.LayoutParams) container.getLayoutParams();
             params.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
-            params.dimAmount = 0.55f;
+            params.dimAmount = TvDesign.dim(activity);
             activity.getWindowManager().updateViewLayout(container, params);
         }
         panel.setAlpha(0f);

@@ -42,7 +42,7 @@ final class ControlCenterDialog extends Dialog {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(14), dp(6), dp(14), dp(6));
+        panel.setPadding(dp(14), dp(2), dp(14), dp(2));
         panel.setClipChildren(false);
         panel.setClipToPadding(false);
         LinearLayout row = row(panel);
@@ -69,9 +69,9 @@ final class ControlCenterDialog extends Dialog {
         addCompact(pair,R.drawable.ic_bluetooth,R.string.control_bluetooth,()->launch(Settings.ACTION_BLUETOOTH_SETTINGS));
         addCompact(pair,R.drawable.ic_apps,R.string.control_apps,()->launch(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
         compactLabel=text(R.string.control_sound,12,0xFFDBE5F2);compactLabel.setGravity(Gravity.CENTER);compactLabel.setAlpha(0);
-        panel.addView(compactLabel,new LinearLayout.LayoutParams(-1,dp(16)));
+        panel.addView(compactLabel,new LinearLayout.LayoutParams(-1,dp(12)));
         notificationPanel=new NotificationsPanel(activity,notifications);
-        LinearLayout.LayoutParams noticeParams=new LinearLayout.LayoutParams(-1,-2);noticeParams.topMargin=dp(6);panel.addView(notificationPanel,noticeParams);
+        LinearLayout.LayoutParams noticeParams=new LinearLayout.LayoutParams(-1,-2);panel.addView(notificationPanel,noticeParams);
         int[][] positions={{0,1},{2,3},{4,5},{6,7,8,9}};
         for(int r=0;r<positions.length;r++)for(int col=0;col<positions[r].length;col++){
             int[] here=positions[r];View v=controls.get(here[col]);
@@ -102,7 +102,7 @@ final class ControlCenterDialog extends Dialog {
         WindowManager.LayoutParams params = w.getAttributes();
         params.gravity = Gravity.TOP | Gravity.END;
         params.x = dp(40);
-        params.y = dp(88);
+        params.y = dp(72);
         params.width = dp(330);
         params.height = WindowManager.LayoutParams.WRAP_CONTENT;
         params.dimAmount = TvDesign.dim(activity);
@@ -128,6 +128,7 @@ final class ControlCenterDialog extends Dialog {
         t.setTextColor(color);
         t.setTextSize(size);
         t.setTypeface(activity.getResources().getFont(R.font.inter_medium));
+        t.setIncludeFontPadding(false);
         t.setGravity(Gravity.CENTER_VERTICAL);
         return t;
     }
@@ -136,7 +137,7 @@ final class ControlCenterDialog extends Dialog {
         LinearLayout tile = new LinearLayout(activity);
         tile.setId(View.generateViewId());
         tile.setGravity(Gravity.CENTER_VERTICAL);
-        tile.setPadding(dp(12), dp(6), dp(8), dp(6));
+        tile.setPadding(dp(10), dp(4), dp(10), dp(4));
         tile.setFocusable(true);
         tile.setClickable(true);
         tile.setContentDescription(activity.getString(title) + ". " + activity.getString(subtitle));
@@ -152,16 +153,17 @@ final class ControlCenterDialog extends Dialog {
         tile.addView(glyph, glyphParams);
         LinearLayout labels = new LinearLayout(activity);
         labels.setOrientation(LinearLayout.VERTICAL);
+        labels.setGravity(Gravity.CENTER_VERTICAL);
         TextView name = text(title, 13, Color.WHITE);
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         name.setMarqueeRepeatLimit(-1);
-        labels.addView(name);
-        TextView sub = text(subtitle, 11, 0xFFBAC3D4);
+        labels.addView(name,new LinearLayout.LayoutParams(-1,-2));
+        TextView sub = text(subtitle, 11, TvDesign.color(activity,R.color.ds_text_secondary));
         sub.setSingleLine(true);
         sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
         sub.setMarqueeRepeatLimit(-1);
-        labels.addView(sub);
+        LinearLayout.LayoutParams subParams=new LinearLayout.LayoutParams(-1,-2);subParams.topMargin=dp(1);labels.addView(sub,subParams);
         tile.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         tile.setOnFocusChangeListener((v, focused) -> {
             if(focused && compactLabel!=null)compactLabel.setAlpha(0);
@@ -170,9 +172,9 @@ final class ControlCenterDialog extends Dialog {
             sub.setEllipsize(focused&&motion?android.text.TextUtils.TruncateAt.MARQUEE:android.text.TextUtils.TruncateAt.END);
             name.setSelected(focused&&motion);
             sub.setSelected(focused&&motion);
-            name.setTextColor(focused ? 0xFF182133 : Color.WHITE);
-            sub.setTextColor(focused ? 0xFF45546C : 0xFFBAC3D4);
-            glyph.setColorFilter(focused ? 0xFF233C61 : 0xFFF2F4FB);
+            name.setTextColor(TvDesign.color(activity,focused?R.color.ds_text_focused:R.color.ds_text_primary));
+            sub.setTextColor(focused ? 0xFF505050 : TvDesign.color(activity,R.color.ds_text_secondary));
+            glyph.setColorFilter(focused ? 0xFF303030 : 0xFFF5F5F5);
             v.animate().cancel();
             if (motion) v.animate().scaleX(focused ? 1.035f : 1).scaleY(focused ? 1.035f : 1).setDuration(TvDesign.focusDuration(activity)).start();
         });
@@ -201,7 +203,7 @@ final class ControlCenterDialog extends Dialog {
         tile.addView(glyph,new android.widget.FrameLayout.LayoutParams(dp(23),dp(23),Gravity.CENTER));
         tile.setOnFocusChangeListener((v,focused)->{
             tile.setBackground(new FrostedControlDrawable(activity,tile,focused,radii));
-            glyph.setColorFilter(focused?0xFF233C61:0xFFF2F4FB);
+            glyph.setColorFilter(focused?0xFF303030:0xFFF5F5F5);
             if(compactLabel!=null){compactLabel.setText(title);compactLabel.setAlpha(focused?1:0);}
             v.animate().cancel();
             if(motion)v.animate().scaleX(focused?1.025f:1).scaleY(focused?1.025f:1).setDuration(TvDesign.focusDuration(activity)).start();

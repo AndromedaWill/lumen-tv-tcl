@@ -26,8 +26,8 @@ final class TvDesign {
         v.setIncludeFontPadding(false);v.setTextColor(color(c,R.color.ds_text_primary));
     }
     static GradientDrawable screen(Context c){return gradient(c,R.color.ds_screen_top,R.color.ds_screen_bottom);}
-    static GradientDrawable panel(Context c){
-        GradientDrawable d=gradient(c,R.color.ds_panel_top,R.color.ds_panel_bottom);d.setCornerRadius(c.getResources().getDimension(R.dimen.ds_radius_panel));d.setStroke(dp(c,1),color(c,R.color.ds_rim));return d;
+    static android.graphics.drawable.Drawable panel(Activity c,View host){
+        return new FrostedControlDrawable(c,host,false,radius(c,R.dimen.ds_radius_panel));
     }
     private static GradientDrawable gradient(Context c,int a,int b){return new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{color(c,a),color(c,b)});}
     static void control(Activity activity,TextView view,float radius){

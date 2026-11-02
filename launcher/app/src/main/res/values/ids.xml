@@ -8,4 +8,5 @@
     <item name="motion_rot_x" type="id" />
     <item name="motion_rot_y" type="id" />
     <item name="motion_tx" type="id" />
+    <item type="id" name="background_video_visible" />
 </resources>

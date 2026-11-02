@@ -33,9 +33,9 @@ final class CalendarPanel extends Dialog {
         super.onCreate(state);requestWindowFeature(Window.FEATURE_NO_TITLE);Window w=getWindow();if(w==null)return;
         w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(22),dp(18),dp(22),dp(18));
-        body.setBackground(TvDesign.panel(activity));setContentView(body);
+        body.setBackground(TvDesign.panel(activity,body));setContentView(body);
         w.setLayout(dp(380),WindowManager.LayoutParams.WRAP_CONTENT);w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-        WindowManager.LayoutParams p=w.getAttributes();p.dimAmount=TvDesign.dim(activity);p.gravity=Gravity.CENTER;w.setAttributes(p);render();
+        WindowManager.LayoutParams p=w.getAttributes();p.dimAmount=TvDesign.dim(activity);p.gravity=Gravity.TOP|Gravity.CENTER_HORIZONTAL;p.y=activity.getResources().getDimensionPixelSize(R.dimen.ds_calendar_top);w.setAttributes(p);render();
     }
     private void render(){
         android.view.View focused=body.findFocus();int focusId=focused==null?nextId:focused.getId();

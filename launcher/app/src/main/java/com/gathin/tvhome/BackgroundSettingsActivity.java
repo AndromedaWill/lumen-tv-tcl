@@ -35,13 +35,13 @@ public final class BackgroundSettingsActivity extends Activity {
         if(saved!=null){pendingReplace=saved.getString("replace");pendingVideo=saved.getBoolean("video");}
         root=new FrameLayout(this);root.setId(R.id.root);root.setBackground(TvDesign.screen(this));setContentView(root);
         TextView title=text("Fondos",28);TvDesign.typography(title,TvDesign.Type.TITLE);place(title,36,20,500,42);
-        TextView sub=text("Tu colección · imágenes y vídeos locales",13);sub.setTextColor(0xFFBAC6D8);place(sub,38,66,470,24);
+        TextView sub=text("Tu colección · imágenes y vídeos locales",13);sub.setTextColor(TvDesign.color(this,R.color.ds_text_secondary));place(sub,38,66,470,24);
         preview=new ImageView(this);preview.setScaleType(ImageView.ScaleType.CENTER_CROP);round(preview,20);place(preview,36,104,456,257);
         preview.setFocusable(true);preview.setClickable(true);preview.setContentDescription("Vista previa del fondo. OK para editar");preview.setOnClickListener(v->edit());
         preview.setOnFocusChangeListener((v,focused)->focusFrame(v,focused,20));
         caption=text("",18);caption.setSingleLine(true);caption.setEllipsize(android.text.TextUtils.TruncateAt.END);place(caption,38,367,450,28);
         options=new LinearLayout(this);options.setOrientation(LinearLayout.VERTICAL);place(options,516,100,408,290);
-        status=text("",12);status.setTextColor(0xFFBAC6D8);status.setMaxLines(2);place(status,516,380,408,34);
+        status=text("",12);status.setTextColor(TvDesign.color(this,R.color.ds_text_secondary));status.setMaxLines(2);place(status,516,380,408,34);
         HorizontalScrollView rail=new HorizontalScrollView(this);rail.setHorizontalScrollBarEnabled(false);rail.setClipToPadding(false);
         thumbs=new LinearLayout(this);thumbs.setPadding(dp(5),dp(8),dp(5),dp(8));rail.addView(thumbs);place(rail,31,420,898,100);
         renderOptions();renderCollection();showPreview();options.getChildAt(0).requestFocus();
@@ -51,7 +51,7 @@ public final class BackgroundSettingsActivity extends Activity {
     private void round(View v,int radius){v.setClipToOutline(true);v.setOutlineProvider(new ViewOutlineProvider(){@Override public void getOutline(View view,android.graphics.Outline o){o.setRoundRect(0,0,view.getWidth(),view.getHeight(),dp(radius));}});}
     private void focusFrame(View v,boolean focus,int radius){
         if(!focus){v.setForeground(null);return;}
-        android.graphics.drawable.GradientDrawable rim=new android.graphics.drawable.GradientDrawable();rim.setColor(Color.TRANSPARENT);rim.setCornerRadius(dp(radius));rim.setStroke(dp(1.5f),0xFFE0ECFC);v.setForeground(rim);
+        android.graphics.drawable.GradientDrawable rim=new android.graphics.drawable.GradientDrawable();rim.setColor(Color.TRANSPARENT);rim.setCornerRadius(dp(radius));rim.setStroke(dp(1.5f),TvDesign.color(this,R.color.ds_accent));v.setForeground(rim);
     }
     private TextView button(LinearLayout parent,String value,Runnable action){
         TextView v=text(value,14);v.setId(View.generateViewId());v.setSingleLine(true);v.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);v.setMarqueeRepeatLimit(-1);v.setPadding(dp(14),0,dp(14),0);v.setFocusable(true);v.setClickable(true);
@@ -92,7 +92,7 @@ public final class BackgroundSettingsActivity extends Activity {
             ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.CENTER_CROP);round(image,12);FrameLayout.LayoutParams ip=new FrameLayout.LayoutParams(-1,dp(60));tile.addView(image,ip);
             TextView name=text(item.label+(item.scheduled?" · "+time(item.minute):""),10);name.setSingleLine(true);name.setEllipsize(android.text.TextUtils.TruncateAt.END);FrameLayout.LayoutParams np=new FrameLayout.LayoutParams(-1,dp(18));np.topMargin=dp(62);tile.addView(name,np);
             media.preview(this,item,image,dp(136),dp(76));
-            tile.setOnFocusChangeListener((v,focused)->{focusFrame(image,focused,12);name.setTextColor(focused?Color.WHITE:0xFFB6C4D7);if(focused){boolean changed=!item.id.equals(selected);selected=item.id;showPreview();if(changed)renderOptions();}});
+            tile.setOnFocusChangeListener((v,focused)->{focusFrame(image,focused,12);name.setTextColor(TvDesign.color(this,focused?R.color.ds_text_primary:R.color.ds_text_secondary));if(focused){boolean changed=!item.id.equals(selected);selected=item.id;showPreview();if(changed)renderOptions();}});
             tile.setOnClickListener(v->{selected=item.id;edit();});tile.setNextFocusUpId(preview.getId()==View.NO_ID?assignPreviewId():preview.getId());
         }
     }
@@ -150,7 +150,7 @@ public final class BackgroundSettingsActivity extends Activity {
     private String interval(){return store.intervalSeconds<60?store.intervalSeconds+" s":store.intervalSeconds/60+" min";}
     private Dialog dialog(String title){
         Dialog d=new Dialog(this);activeDialog=d;d.setOnDismissListener(ignored->{if(activeDialog==d)activeDialog=null;});d.requestWindowFeature(Window.FEATURE_NO_TITLE);ScrollView scroll=new ScrollView(this);
-        LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(18),dp(14),dp(18),dp(14));body.setBackground(TvDesign.panel(this));body.addView(text(title,18));scroll.addView(body);d.setContentView(scroll);
+        LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(18),dp(14),dp(18),dp(14));body.setBackground(TvDesign.panel(this,body));body.addView(text(title,18));scroll.addView(body);d.setContentView(scroll);
         d.findViewById(android.R.id.content).setTag(body);Window w=d.getWindow();if(w!=null){w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));w.setLayout(dp(340),-2);w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);WindowManager.LayoutParams p=w.getAttributes();p.dimAmount=TvDesign.dim(this);w.setAttributes(p);}return d;
     }
     private void choose(String title,String[] values,java.util.function.IntConsumer action){Dialog d=dialog(title);LinearLayout body=(LinearLayout)d.findViewById(android.R.id.content).getTag();for(int i=0;i<values.length;i++){int at=i;button(body,values[i],()->{d.dismiss();action.accept(at);});}d.show();body.getChildAt(1).requestFocus();}

@@ -18,6 +18,7 @@ final class VideoStillCover extends View {
     private int attempts;
     private int posterGeneration;
     private Runnable departing;
+    private boolean committingDeparture;
     private long departureStarted;
     private final Runnable deadline=this::finishDeparture;
     private final Runnable retry=this::capture;
@@ -42,7 +43,11 @@ final class VideoStillCover extends View {
         if(closed||departing!=null)return;
         departing=launch;departureStarted=android.os.SystemClock.elapsedRealtime();postDelayed(deadline,96);attempts=0;capture();
     }
-    private void finishDeparture(){removeCallbacks(deadline);Runnable launch=departing;departing=null;if(launch!=null&&!closed){android.util.Log.i("TCLHomePerf","videoFreezeMs="+(android.os.SystemClock.elapsedRealtime()-departureStarted)+" sameVideoStill="+(still!=null));launch.run();}}
+    private void finishDeparture(){
+        removeCallbacks(deadline);if(departing==null||closed||committingDeparture)return;committingDeparture=true;
+        Runnable commit=()->{Runnable launch=departing;departing=null;committingDeparture=false;if(launch!=null&&!closed){android.util.Log.i("TCLHomePerf","videoFreezeMs="+(android.os.SystemClock.elapsedRealtime()-departureStarted)+" sameVideoStill="+(still!=null));launch.run();}};
+        if(still!=null){showStill();postOnAnimation(()->post(commit));}else commit.run();
+    }
     private void capture(){
         if(closed||copying||!video.isShown()||!video.getHolder().getSurface().isValid()||attempts>=2)return;
         copying=true;attempts++;
@@ -63,7 +68,7 @@ final class VideoStillCover extends View {
         },"home-video-still").start();
     }
     void showStill(){removeCallbacks(retry);animate().cancel();setAlpha(1);invalidate();}
-    void close(){closed=true;departing=null;posterGeneration++;removeCallbacks(retry);removeCallbacks(deadline);still=null;}
+    void close(){closed=true;departing=null;committingDeparture=false;posterGeneration++;removeCallbacks(retry);removeCallbacks(deadline);still=null;}
     @Override protected void onDraw(Canvas canvas){
         if(still!=null){dest.set(0,0,getWidth(),getHeight());canvas.drawBitmap(still,null,dest,paint);return;}
         // Transparent until the first video/poster frame: retain the already visible composition,

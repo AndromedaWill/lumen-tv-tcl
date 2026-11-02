@@ -18,8 +18,7 @@ final class NotificationsPanel extends ScrollView {
     private View first;
     NotificationsPanel(Activity activity,Runnable configure){
         super(activity);this.activity=activity;this.configure=configure;setFillViewport(false);setVerticalScrollBarEnabled(false);
-        body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(12),dp(10),dp(12),dp(10));
-        body.setBackground(TvDesign.panel(activity));addView(body);render();
+        body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);addView(body);render();
     }
     private int dp(int x){return Math.round(x*getResources().getDisplayMetrics().density);}
     @Override protected void onMeasure(int w,int h){super.onMeasure(w,MeasureSpec.makeMeasureSpec(dp(100),MeasureSpec.AT_MOST));}
@@ -30,18 +29,18 @@ final class NotificationsPanel extends ScrollView {
         TextView v=text(title+(subtitle.isEmpty()?"":"\n"+subtitle),13,Color.WHITE);v.setId(View.generateViewId());v.setTag(title);
         v.setMaxLines(2);v.setGravity(Gravity.CENTER_VERTICAL);v.setPadding(dp(12),dp(5),dp(12),dp(5));
         v.setFocusable(true);v.setClickable(true);style(v,false);v.setOnFocusChangeListener((x,focus)->style(v,focus));v.setOnClickListener(x->click.run());
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(subtitle.isEmpty()?32:42));p.topMargin=dp(6);body.addView(v,p);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(44));p.topMargin=dp(2);body.addView(v,p);
         if(first==null)first=v;return v;
     }
     private void style(TextView v,boolean focus){
-        android.graphics.drawable.GradientDrawable shape=new android.graphics.drawable.GradientDrawable();
-        shape.setCornerRadius(dp(16));shape.setColor(focus?0x332F668A:0x101C354B);shape.setStroke(dp(1),focus?0xCCB9DCF4:0x223D566F);v.setBackground(shape);
+        v.setBackground(new FrostedControlDrawable(activity,v,focus));v.setTextColor(TvDesign.color(activity,focus?R.color.ds_text_focused:R.color.ds_text_primary));
     }
     void focusFirst(){if(first!=null)first.requestFocus();}
     boolean back(){if(!details)return false;details=false;render();focusFirst();return true;}
     private void render(){
         Object focused=body.findFocus()==null?null:body.findFocus().getTag();body.removeAllViews();first=null;
         boolean access=HomeNotificationService.hasAccess(activity),enabled=HomeNotificationService.enabled(activity);
+        body.setBackground(details?TvDesign.panel(activity,body):null);int padding=details?dp(12):0;body.setPadding(padding,details?dp(10):0,padding,details?dp(10):0);
         if(details||enabled)body.addView(text(activity.getString(R.string.control_notifications),13,0xCCDEE6F1));
         if(!enabled)icons.clear();
         if(!access){HomeNotificationService.BUFFER.clear();if(HomeNotificationService.prefs(activity).getBoolean("enabled",false))HomeNotificationService.setEnabled(activity,false);}

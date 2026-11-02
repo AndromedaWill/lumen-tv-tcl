@@ -29,6 +29,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     private File file;
     private final VideoStillCover cover;
     private final SurfaceView video;
+    private final FrameLayout root;
     private final java.util.List<View> layers=new java.util.ArrayList<>();
     private final View gridDim;
     private final SharedPreferences prefs;
@@ -141,6 +142,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     }
 
     private AerialBackdrop(Context context, FrameLayout root, int index, File file, int coverColor, boolean cycle) {
+        this.root=root;
         this.file = file;
         this.context = context.getApplicationContext();
         this.cycle = cycle;
@@ -199,6 +201,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
 
     void resume() {
         resumed = true;
+        root.setTag(R.id.background_video_visible,Boolean.TRUE);
         video.setVisibility(View.VISIBLE);
         start();
     }
@@ -210,7 +213,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         release();
     }
     void beforeAppLaunch(Runnable launch){if(resumed&&player!=null)cover.beforeAppLaunch(launch);else launch.run();}
-    void close(){pause();cover.close();for(View v:layers)if(v.getParent() instanceof ViewGroup)((ViewGroup)v.getParent()).removeView(v);layers.clear();}
+    void close(){pause();root.setTag(R.id.background_video_visible,Boolean.FALSE);cover.close();for(View v:layers)if(v.getParent() instanceof ViewGroup)((ViewGroup)v.getParent()).removeView(v);layers.clear();}
 
     private void start() {
         if (!resumed || surface == null || player != null) return;

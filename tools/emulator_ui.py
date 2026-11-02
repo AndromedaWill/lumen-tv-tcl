@@ -21,7 +21,8 @@ def rect(n):return list(map(int,re.findall(r'\d+',n.get('bounds',''))))
 def focus(text,steps=18):
     previous=None;stuck=0
     for i in range(steps):
-        nodes,f=dump();assert f is not None,'No focus'
+        nodes,f=dump()
+        if f is None:keys('DPAD_DOWN');continue
         candidates=[n for n in nodes if n.get('focusable')=='true' and label(n).casefold().startswith(text.casefold())]
         if not candidates:keys('DPAD_DOWN');continue
         target=candidates[0]

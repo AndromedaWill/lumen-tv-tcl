@@ -29,6 +29,7 @@
         android:duplicateParentState="true"
         android:textSize="15sp"
         android:fontFamily="@font/inter_medium"
+        android:includeFontPadding="false"
         android:singleLine="true" />
 
     <View
@@ -46,5 +47,6 @@
         android:duplicateParentState="true"
         android:textSize="11sp"
         android:fontFamily="@font/inter_regular"
+        android:includeFontPadding="false"
         android:letterSpacing="0.04" />
 </LinearLayout>
