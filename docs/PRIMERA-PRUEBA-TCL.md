@@ -228,3 +228,12 @@ Google TV resolvió HOME antes y después: `com.google.android.apps.tv.launcherx
 Las pruebas del nuevo desvanecimiento/foco, música y avisos pasaron en instrumentación a 720p y 1080p con datos sintéticos propios, sin activar NotificationListener. La continuidad de vídeo de AD66 pasó dos ciclos; la repetición en 5a0247 quedó incompleta en el selector de vídeo del emulador tras reiniciar (fixture no localizado), por lo que no se declara ese recorrido final completo. No ha cambiado el código de vídeo entre esos dos APK. La comprobación visual de fondos animados en TCL queda pendiente del propietario.
 
 La prueba independiente de recuperación está en RECUPERACION-INICIO-TCL.md. El rol asignado persistió en dos reinicios del emulador, pero Home efectivo siguió en el original por prioridad. No se extrapola estabilidad como Home principal a la TCL ni se autorizó su cambio con esta instalación. Evidencias en artifacts/media-09/physical-5a0247 y artifacts/recovery-10/characterized.
+
+
+## Actualización autorizada 847bd18f57c4 · 02/11/2026
+
+Se instaló y abrió la revisión de fondos con autorización expresa «Implementa, y actualiza la app inmediatamente despues». Serial explícito 192.168.0.107:33499, paquete pe.tclhome.prototype previamente existente. Install -r --user 0: Success. HOME antes y después: com.google.android.apps.tv.launcherx/.home.HomeActivity. Sin concesiones ni cambios de Inicio, accesibilidad, servicios, HDMI o paquetes nativos.
+
+APK conservado artifacts/backdrop-11/candidate-847bd18f57c4.apk, SHA-256 847bd18f57c4294f6bfdc56a3e6c3841c1c9409307b76bb7c25ee16e4d7de6f3; checkpoint 08ff50f3. Firma v2 válida con el certificado habitual, compilación y 171 pruebas JVM sin errores, lint sin errores. Apertura Status ok, COLD, TotalTime 4232 ms / WaitTime 4258 ms. Es una observación aislada después de actualizar, no una medida comparable de respuesta al mando ni una mejora de arranque.
+
+Cambios, compromisos y limitaciones: FONDOS-11.md. La validación final del emulador quedó incompleta por desaparición repetida del proceso; no se declara aprobación visual final ni mejora de jank cuantificada. El propietario probará el desenfoque con vídeo, el microcorte del fondo fijo y la apertura/regreso de Africa Night. Registro completo de instalación en artifacts/backdrop-11/physical/update.json.
