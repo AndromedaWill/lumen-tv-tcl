@@ -1274,7 +1274,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ScenicBackdropDrawable.setLower(root, dockRow && position >= COLUMNS, animations && !reducedMotion);
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
-        if (aerial != null) aerial.setGridFocused(dockRow && position >= COLUMNS);
+        if (aerial != null) aerial.setGridFocused(dockRow && position >= COLUMNS,animations&&!reducedMotion);
+        if(personalBackground!=null)personalBackground.setGridFocused(dockRow&&position>=COLUMNS,animations&&!reducedMotion);
         // Focus restored before the first layout (cold start): the tile has no size yet, and the glass
         // would be sized to 2*pad. Run again once the tile is laid out.
         if (card.getWidth() == 0) {
@@ -2045,7 +2046,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.addOnChildAttachStateChangeListener(pendingFocusAttach);
         int park=dockRow && lastFocused<COLUMNS && pos>=COLUMNS ? parkDockBy(grid) : Integer.MIN_VALUE;
         if(park!=Integer.MIN_VALUE && park>0){
-            ScenicBackdropDrawable.setLower(root,true,!reducedMotion);
+            ScenicBackdropDrawable.setLower(root,true,animations&&!reducedMotion);
+            if(aerial!=null)aerial.setGridFocused(true,animations&&!reducedMotion);
+            if(personalBackground!=null)personalBackground.setGridFocused(true,animations&&!reducedMotion);
             if(reducedMotion){grid.scrollBy(0,park);grid.post(()->{
                 cancelPendingFocusScroll();RecyclerView.ViewHolder h=grid.findViewHolderForAdapterPosition(pos);
                 if(h!=null)h.itemView.findViewById(R.id.card).requestFocus();

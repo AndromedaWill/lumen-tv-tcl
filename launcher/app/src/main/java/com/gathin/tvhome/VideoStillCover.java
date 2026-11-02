@@ -18,7 +18,8 @@ final class VideoStillCover extends View {
     private Bitmap still;
     private boolean copying, closed;
     private int attempts, posterGeneration, revealTicket;
-    private Runnable ready;
+    private Runnable ready, copied, pendingLaunch;
+    private final Runnable launchTimeout=this::finishLaunch;
     private final Runnable retry = this::capture;
     private final Runnable reveal = () -> {
         if (state.canReveal(revealTicket)) { state.revealed(revealTicket); setAlpha(0); }
@@ -53,14 +54,20 @@ final class VideoStillCover extends View {
     /** Keep the still until PixelCopy verifies that the live surface owns a frame. */
     void begin() { removeCallbacks(reveal); state.begin(); attempts = 0; capture(); }
 
-    /** Dispatch immediately. A best-effort last-frame copy must never block the app launch. */
+    /** Copy before teardown; the asynchronous hand-off is bounded to 48 ms. */
     void beforeAppLaunch(Runnable launch) {
-        state.hold(); removeCallbacks(reveal); removeCallbacks(retry);
-        attempts = 0; capture(); launch.run();
+        if(pendingLaunch!=null)return;
+        removeCallbacks(reveal);removeCallbacks(retry);
+        pendingLaunch=launch;attempts=0;capture();postDelayed(launchTimeout,48);
     }
+    private void finishLaunch(){
+        Runnable launch=pendingLaunch;pendingLaunch=null;removeCallbacks(launchTimeout);
+        if(launch!=null&&!closed)launch.run();
+    }
+    void refreshSnapshot(Runnable action){copied=action;attempts=0;capture();}
 
     private void capture() {
-        if (closed || copying || !video.isShown() || !video.getHolder().getSurface().isValid() || attempts >= 2) return;
+        if (!state.acceptsCopy(state.ticket()) || copying || !video.isShown() || !video.getHolder().getSurface().isValid() || attempts >= 2) return;
         copying = true; attempts++;
         int ticket = state.ticket();
         int w = Math.min(1280, Math.max(1, video.getWidth()));
@@ -71,14 +78,20 @@ final class VideoStillCover extends View {
             try { bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888); }
             catch (OutOfMemoryError unavailable) { post(() -> copying = false); return; }
             post(() -> {
-                if (closed || !video.isShown()) { copying = false; bitmap.recycle(); return; }
+                if (!state.acceptsCopy(ticket) || !video.isShown()) {
+                    copying = false;bitmap.recycle();
+                    if(state.waiting()&&video.isShown())post(retry);
+                    return;
+                }
                 try {
                     PixelCopy.request(video, bitmap, result -> {
                         copying = false;
-                        if (!closed && result == PixelCopy.SUCCESS) {
+                        if (state.acceptsCopy(ticket) && result == PixelCopy.SUCCESS) {
                             // RenderThread may still own the old still. GC retires published bitmaps.
                             still = bitmap; invalidate();
                             signalReady();
+                            Runnable action=copied;copied=null;if(action!=null)action.run();
+                            if(pendingLaunch!=null){finishLaunch();return;}
                             if (state.canReveal(ticket)) {
                                 revealTicket = ticket; postOnAnimation(reveal);
                             } else if (state.waiting()) capture();
@@ -93,7 +106,7 @@ final class VideoStillCover extends View {
     }
 
     void showStill() {
-        state.hold(); removeCallbacks(retry); removeCallbacks(reveal);
+        state.hold(); removeCallbacks(retry); removeCallbacks(reveal);copied=null;
         animate().cancel(); setAlpha(1); invalidate();
     }
     boolean hasStill(){return still!=null;}
@@ -104,6 +117,7 @@ final class VideoStillCover extends View {
     }
     void close() {
         closed = true; state.close(); posterGeneration++; ready=null;
+        copied=null;pendingLaunch=null;removeCallbacks(launchTimeout);
         removeCallbacks(retry); removeCallbacks(reveal); still = null;
     }
     @Override protected void onDraw(Canvas canvas) {

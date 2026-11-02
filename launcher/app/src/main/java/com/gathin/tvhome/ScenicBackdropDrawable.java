@@ -186,7 +186,7 @@ final class ScenicBackdropDrawable extends Drawable {
         if(root==null)return;
         root.setTag(R.id.grid,lower);
         if(root.getBackground() instanceof ScenicBackdropDrawable)
-            ((ScenicBackdropDrawable)root.getBackground()).setLower(lower,animate);
+            ((ScenicBackdropDrawable)root.getBackground()).setLower(lower,animate&&!Boolean.TRUE.equals(root.getTag(R.id.background_video_visible)));
     }
     private void setLower(boolean value,boolean animate) {
         if(lower==value && (transition!=null || blend==(value?1:0)))return;
@@ -195,7 +195,10 @@ final class ScenicBackdropDrawable extends Drawable {
         float end=value?1:0;
         if(!animate){blend=end;invalidateSelf();return;}
         transition=ValueAnimator.ofFloat(blend,end);
-        transition.setDuration(280);
+        // Let initial RecyclerView row attachment/layout finish before starting the veil.
+        // Total motion remains 280 ms; fewer invalidations compete with the first Down frame.
+        transition.setStartDelay(value?100:0);
+        transition.setDuration(value?180:280);
         transition.addUpdateListener(a->{blend=(float)a.getAnimatedValue();invalidateSelf();});
         transition.start();
     }

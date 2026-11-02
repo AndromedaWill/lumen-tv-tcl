@@ -37,6 +37,7 @@ final class PersonalBackground {
     void hidden(){if(video!=null)video.hidden();if(retiring!=null)retiring.hidden();}
     void close(){stop();if(video!=null){video.close();video=null;}finishRetiring();}
     private void finishRetiring(){if(retiring!=null){retiring.close();retiring=null;}root.setTag(R.id.background_video_visible,video!=null);}
+    void setGridFocused(boolean focused,boolean animate){if(video!=null)video.setGridFocused(focused,animate);}
     void beforeAppLaunch(Runnable launch){if(video!=null)video.beforeAppLaunch(launch);else launch.run();}
     void update(){
         if(!active)return;handler.removeCallbacks(due);BackgroundStore s=BackgroundStore.load(activity);usingLegacy=LEGACY.equals(s.mode);if(usingLegacy)return;

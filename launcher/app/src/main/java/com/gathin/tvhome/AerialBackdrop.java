@@ -31,7 +31,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     private final SurfaceView video;
     private final FrameLayout root;
     private final java.util.List<View> layers=new java.util.ArrayList<>();
-    private final View gridDim;
+    private final GridBackdropView gridDim;
     private final SharedPreferences prefs;
     private MediaPlayer player;
     private SurfaceHolder surface;
@@ -144,6 +144,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     private AerialBackdrop(Context context, FrameLayout root, int index, File file, int coverColor, boolean cycle) {
         this.root=root;
         root.setTag(R.id.background_video_visible,Boolean.TRUE);
+        ScenicBackdropDrawable.setLower(root,Boolean.TRUE.equals(root.getTag(R.id.grid)),false);
         this.file = file;
         this.context = context.getApplicationContext();
         this.cycle = cycle;
@@ -185,8 +186,9 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
             v.forceHasOverlappingRendering(false);
         }
 
-        gridDim = new View(context);
+        gridDim = new GridBackdropView(context);
         gridDim.setBackgroundColor(0x9E05070C);
+        gridDim.setWillNotDraw(false);
         gridDim.setAlpha(0f);
         gridDim.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         root.addView(gridDim, index + 4, full);
@@ -201,15 +203,17 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     void setGridFocused(boolean inGrid,boolean animate) {
         if (inGrid == dimmed) return;
         dimmed = inGrid;
-        gridDim.animate().cancel();
-        if(animate)gridDim.animate().alpha(inGrid ? 1f : 0f).setDuration(inGrid ? 380 : 300).start();
-        else gridDim.setAlpha(inGrid?1f:0f);
+        if(inGrid){
+            gridDim.blur(cover.snapshot());
+            if(resumed&&player!=null)cover.refreshSnapshot(()->{if(dimmed&&resumed)gridDim.blur(cover.snapshot());});
+        }
+        gridDim.focused(inGrid,animate);
     }
 
     void resume() {
         if(resumed)return;
         resumed = true;
-        cover.showStill();
+        gridDim.focused(dimmed,false);cover.showStill();
         root.setTag(R.id.background_video_visible,Boolean.TRUE);
         video.setVisibility(View.VISIBLE);
         start();
@@ -217,7 +221,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
 
     void pause() {
         resumed = false;
-        cover.showStill();
+        gridDim.freeze();cover.showStill();
         release();
     }
     /** Decoder is already released in pause; retire the surface once the window is hidden. */
@@ -225,7 +229,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     boolean hasStill(){return cover.hasStill();}
     void whenReady(Runnable action){cover.whenReady(action);}
     void beforeAppLaunch(Runnable launch){if(resumed&&player!=null)cover.beforeAppLaunch(launch);else launch.run();}
-    void close(){pause();root.setTag(R.id.background_video_visible,Boolean.FALSE);if(root.getTag(R.id.video_still_owner)==cover)root.setTag(R.id.video_still_owner,null);cover.close();for(View v:layers)if(v.getParent() instanceof ViewGroup)((ViewGroup)v.getParent()).removeView(v);layers.clear();}
+    void close(){pause();gridDim.close();root.setTag(R.id.background_video_visible,Boolean.FALSE);if(root.getTag(R.id.video_still_owner)==cover)root.setTag(R.id.video_still_owner,null);cover.close();for(View v:layers)if(v.getParent() instanceof ViewGroup)((ViewGroup)v.getParent()).removeView(v);layers.clear();}
 
     private void start() {
         if (!resumed || surface == null || player != null) return;
@@ -250,6 +254,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
             mp.setOnInfoListener((p, what, extra) -> {
                 if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START && player == p) {
                     cover.begin();
+                    if(dimmed)cover.refreshSnapshot(()->{if(dimmed&&resumed)gridDim.blur(cover.snapshot());});
                 }
                 return false;
             });

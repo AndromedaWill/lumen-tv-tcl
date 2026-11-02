@@ -4,6 +4,14 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class VideoCoverStateTest {
+    @Test public void lateCopyCannotReplaceValidStillAfterPause() {
+        VideoCoverState state=new VideoCoverState();assertFalse(state.acceptsCopy(state.ticket()));
+        int old=state.begin();state.hold();
+        assertFalse(state.acceptsCopy(old));
+        int current=state.begin();assertFalse(state.acceptsCopy(old));assertTrue(state.acceptsCopy(current));
+        state.revealed(current);assertTrue(state.acceptsCopy(current));
+        state.close();assertFalse(state.acceptsCopy(current));
+    }
     @Test public void pauseBeforeCopyCompletesKeepsStillVisible() {
         VideoCoverState state=new VideoCoverState(); int request=state.begin();
         state.hold(); assertFalse(state.canReveal(request));
