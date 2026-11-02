@@ -52,7 +52,7 @@ La muestra de reposo de Ajustes no añadió fotogramas en dos segundos (20 → 2
 
 ## Verificación y APK
 
-Java17 / SDK34 / wrapper fijado. Build, **155 pruebas JVM sin fallos** (siete nuevas para navegación/restauración), lint **0 errores y 118 advertencias** conservadas. El manifiesto mantiene la misma semántica que 10DB: paquete de prueba `pe.tclhome.prototype`, cinco actividades existentes, seis servicios protegidos declarados, cero receptores estáticos y cuatro permisos heredados. Se cotejó también el manifiesto empaquetado completo resolviendo nombres: solo se renumeraron dos referencias a recursos (`AppTheme` y `sleep_service_name`), sin cambios de componentes, acciones ni permisos. Sin .so que excluya armeabi-v7a; la prueba física de esta revisión sigue pendiente. Firma APK v2 válida en API34, mismo certificado de desarrollo.
+Java17 / SDK34 / wrapper fijado. Build, **155 pruebas JVM sin fallos** (siete nuevas para navegación/restauración), lint **0 errores y 118 advertencias** conservadas. El manifiesto mantiene la misma semántica que 10DB: paquete de prueba `pe.tclhome.prototype`, cinco actividades existentes, seis servicios protegidos declarados, cero receptores estáticos y cuatro permisos heredados. Se cotejó también el manifiesto empaquetado completo resolviendo nombres: solo se renumeraron dos referencias a recursos (`Theme.TvHome` y `sleep_service_name`), sin cambios de componentes, acciones ni permisos. Sin .so que excluya armeabi-v7a; la prueba física de esta revisión sigue pendiente. Firma APK v2 válida en API34, mismo certificado de desarrollo.
 
 APK conservado: `artifacts/stage-07/candidate-39264c9ee740.apk` (6,441,952 bytes).
 SHA-256: `39264c9ee740fb47d32e9c60b5fa35c57a4ffda95c36e773bc073ba8d5997523`.
@@ -75,3 +75,12 @@ El build no instala. Los tests de UI y comparación verifican qemu, usan el seri
 Se entrega para aprobar estas pantallas. **No se añadieron alias HDMI, recientes ni otra ampliación**: siguen después de aprobar Ajustes, como pidió el usuario. Los colores importantes se consultarán antes de cambiarlos; aquí solo se reforzó la cobertura neutra solicitada.
 
 La caracterización de jank sigue abierta como P1 para una medición física autorizada. Antes de recomendar una actualización estable: repetir dock/catálogo, retorno y vídeo real en la TCL, confirmar nitidez/mando/proveedor de archivos y medir memoria/frames con condiciones controladas. La sustitución HOME, accesibilidad, limpieza, entradas y volumen global no se combinan con esta prueba. El launcher original y servicios nativos se conservan.
+
+
+## Próxima prueba física · pendiente de autorización
+
+El usuario confirmó como conexión actual `192.168.0.107:37935`. No se ha contactado ese endpoint durante esta entrega. El checkpoint funcional es `90fc731`; el APK firmado es el 39264 indicado arriba. Se solicitarán por separado conexión, consulta de nuestro paquete, comprobación de HOME antes/después, actualización y apertura. No se autoriza HOME ni acceso a servicios por instalar.
+
+La actualización controlada usa `adb -s 192.168.0.107:37935 install -r --user 0 "C:\Users\milmil\Documents\ChatGPT\Apple tv en andriod tv\artifacts\stage-07\candidate-39264c9ee740.apk"`. Solo proceder si las consultas confirman nuestra app y Google TV como HOME. Abrir después con `adb -s 192.168.0.107:37935 shell am start -W -n pe.tclhome.prototype/com.gathin.tvhome.MainActivity`. Para salir, el usuario pulsa Home y vuelve al Inicio vigente; Atrás cierra los paneles por nivel. La verificación posterior de HOME no lo modifica.
+
+Si hay un problema, Home permite continuar usando Google TV. El APK EC8011 previo sigue conservado; cualquier reinstalación/desinstalación o restauración requiere otra autorización específica. Desinstalar nuestra app borraría sus preferencias e imágenes importadas; no se ejecuta como parte de esta actualización. Convertir nuestra app en Inicio principal será una prueba posterior mediante el selector oficial, después de aceptación visual y un procedimiento de vuelta verificado.
