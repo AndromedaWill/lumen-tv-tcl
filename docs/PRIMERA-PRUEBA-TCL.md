@@ -217,3 +217,14 @@ Se actualizó nuestra app en `192.168.0.107:37935` tras cinco autorizaciones esp
 Google TV (`com.google.android.apps.tv.launcherx/.home.HomeActivity`) sigue siendo HOME, confirmado antes y después. Se conservan preferencias y servicios. Ninguna activación de accesibilidad/notificaciones, cambio de entradas o limpieza forma parte de esta actualización. [Cambios y pruebas del candidato](ETAPA-07.md), [caracterización del jank](JANK-07.md). Registro de la operación: `artifacts/stage-07/physical/update.json`.
 
 Las afirmaciones anteriores de «EC8011 sigue instalado» describen ese checkpoint histórico; ahora está instalado 39264. Las métricas de EC8011/B859 no se atribuyen al nuevo APK. La revisión visual del usuario, frames, memoria y captura de 39264 están pendientes; las lecturas se han solicitado de nuevo. No convertir todavía el candidato en HOME principal sin una aceptación independiente y la reversión preparada.
+
+
+## Actualización autorizada 5a0247462e4b · 02/11/2026
+
+Instalada con `adb -s 192.168.0.107:33499 install -r --user 0` después de la autorización expresa del propietario. Resultado Success; preferencias conservadas por actualización. APK de 6.464.400 bytes, SHA-256 `5a0247462e4ba61d2000c1a09b320fe5fa99f3ffd28864969122b607635ecc64`, checkpoint de código `0a5d20df`. Firma v2 válida desde API 26 y mismo certificado de pruebas; manifiesto de seguridad sin cambios frente a 39264. Compilación, 170 pruebas JVM sin fallos y lint sin errores; 123 advertencias pendientes de auditorías anteriores/componentes programáticos, sin declararlas resueltas.
+
+Google TV resolvió HOME antes y después: `com.google.android.apps.tv.launcherx/.home.HomeActivity`. Se abrió nuestra MainActivity con Status ok, arranque COLD, TotalTime 1648ms y WaitTime 1670ms: tiempos de `am start -W`, no una medida de respuesta al mando ni un benchmark comparable. No se cambiaron roles ni se habilitaron accesibilidad o permisos, ni se reinició la TV o deshabilitaron paquetes. Los accesos concedidos previamente por el usuario siguen bajo control de Android.
+
+Las pruebas del nuevo desvanecimiento/foco, música y avisos pasaron en instrumentación a 720p y 1080p con datos sintéticos propios, sin activar NotificationListener. La continuidad de vídeo de AD66 pasó dos ciclos; la repetición en 5a0247 quedó incompleta en el selector de vídeo del emulador tras reiniciar (fixture no localizado), por lo que no se declara ese recorrido final completo. No ha cambiado el código de vídeo entre esos dos APK. La comprobación visual de fondos animados en TCL queda pendiente del propietario.
+
+La prueba independiente de recuperación está en RECUPERACION-INICIO-TCL.md. El rol asignado persistió en dos reinicios del emulador, pero Home efectivo siguió en el original por prioridad. No se extrapola estabilidad como Home principal a la TCL ni se autorizó su cambio con esta instalación. Evidencias en artifacts/media-09/physical-5a0247 y artifacts/recovery-10/characterized.
