@@ -159,6 +159,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
 
         // The still and live surface share the same shades, avoiding a brightness jump on pause.
         cover = new VideoStillCover(context,root,video);
+        root.setTag(R.id.video_still_owner,cover);
         cover.poster(file,prefs.getInt(POSITION,0));
         cover.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         root.addView(cover, index + 1, full);
@@ -224,7 +225,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     boolean hasStill(){return cover.hasStill();}
     void whenReady(Runnable action){cover.whenReady(action);}
     void beforeAppLaunch(Runnable launch){if(resumed&&player!=null)cover.beforeAppLaunch(launch);else launch.run();}
-    void close(){pause();root.setTag(R.id.background_video_visible,Boolean.FALSE);cover.close();for(View v:layers)if(v.getParent() instanceof ViewGroup)((ViewGroup)v.getParent()).removeView(v);layers.clear();}
+    void close(){pause();root.setTag(R.id.background_video_visible,Boolean.FALSE);if(root.getTag(R.id.video_still_owner)==cover)root.setTag(R.id.video_still_owner,null);cover.close();for(View v:layers)if(v.getParent() instanceof ViewGroup)((ViewGroup)v.getParent()).removeView(v);layers.clear();}
 
     private void start() {
         if (!resumed || surface == null || player != null) return;

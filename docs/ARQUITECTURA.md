@@ -63,7 +63,7 @@ NotificationBuffer, HomeNotificationService y NotificationsPanel implementan el 
 
 El material compartido pasa a cristal acromático: muestra la miniatura neutral con alpha 96/255, un tinte carbón de 74/255 y conserva el color original de la foto visible detrás. Se añaden 57,600 bytes para la variante neutral, preparada una vez en el worker: total de bitmaps CPU 8,409,600 bytes a 1080p. No hay un bitmap extra por control. El calendario se ancla por encima del dock, los textos prescinden de padding de fuente y los avisos resumidos carecen de caja exterior. Esta política actualiza los paneles opacos de la iteración anterior; ver DESIGN-SYSTEM.md.
 
-VideoStillCover espera la copia acotada y publica la cubierta antes de iniciar la app, dando un fotograma al dibujo normal para que la transición no capture una raíz ajena o una SurfaceView ya liberada. `videoFreezeMs` incluye ese intervalo total. La espera de copia es de hasta 96ms más el fotograma de presentación; no es una garantía de tiempo real si el hilo principal está ocupado. Las muestras observadas variaron: 33ms en una versión previa, 158ms en la grabación final verificada y 47–113ms en cinco ciclos sin grabación. También se conserva una muestra de 310ms bajo carga. Son cifras de emulador, no de la TCL.
+VideoStillCover conserva una instantánea del mismo vídeo y valida el primer fotograma de la superficie antes de retirar la cubierta. La revisión 08 eliminó la barrera de espera de hasta 96ms al lanzar apps. La cubierta queda debajo de las sombras compartidas para evitar cambios de brillo; MediaPlayer se libera al pausar y la superficie se oculta al dejar de ser visible. BackdropStartupGate acota la espera inicial sin mostrar otra fotografía. Ver REVISION-08.md para medidas históricas y límites de las transiciones entre tareas de Android.
 
 Los modales de Fondos y Personalizar conservan intactos los controles de su pantalla base. El oscurecimiento se aplica solo mediante la ventana y el token compartido; no existe un helper que oculte o atenúe individualmente sus vistas. La prueba visual comprueba también contexto visible y retorno de foco.
 
@@ -73,3 +73,10 @@ Los modales de Fondos y Personalizar conservan intactos los controles de su pant
 `SettingsNavigation` es una pila pura de páginas y claves de foco validada con pruebas JVM; no guarda Views ni Context. `SettingsPageView` comparte composición, filas, selección y navegación de las páginas visibles. `LauncherSettingsActivity` conserva la lógica de preferencias, apertura de la galería y accesos nativos: solo carga Config al crear la Activity o restablecer el tema, no en cada push/pop. Se conservan las preferencias existentes y las entradas públicas de la Activity; no hay servicios o permisos nuevos.
 
 Se elimina la antigua plantilla XML plana y sus estilos ya sin consumidores. `TvDesign.controlFrame` es la base de estados de las filas compuestas y de los controles TextView existentes. `overlayPanel` comparte el cristal con un cuerpo neutral de mayor cobertura para menús con texto sobre otros controles. Los cambios no ocultan la pantalla base.
+
+
+## Etapa 09/10 · música, bordes y recuperación
+
+NowPlayingSessions encapsula descubrimiento y callbacks de MediaSession; NowPlayingPanel presenta controles admitidos. NotificationsPanel contiene solo avisos actuales. ControlCenterDialog organiza una columna con EdgeFadeScrollView; las tarjetas mantienen su material independiente y el foco se protege de sus máscaras. ContextFrostDrawable se limita al diálogo de permiso. Sin servicio multimedia nuevo ni concesión automática.
+
+La verificación del rol HOME, prioridad y actividad efectiva se mantiene fuera del launcher en un arnés exclusivo de emulador. No se añadió un watchdog, receptor de boot ni código que cambie HOME. RECUPERACION-INICIO-TCL.md distingue la recuperación probada de la sustitución efectiva aún no validada.

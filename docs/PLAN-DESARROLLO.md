@@ -51,3 +51,8 @@ Después de la validación local: aprobación visual y autorización independien
 3. Retirar la etiqueta de los botones compactos y reforzar ligeramente el material del menú superpuesto, manteniendo la transparencia de los demás controles y el contexto inferior.
 4. Presentar comparativas y resultados para aprobación. Alias locales HDMI, recientes de lanzamientos propios y futuras personalizaciones se mantienen **para la siguiente etapa**, después de aprobar esta. No añadirlas a este candidato.
 5. La actualización/medición de la TCL necesita autorización independiente; HOME permanece otra prueba. No usar desactivación de servicios ni cambios globales para mejorar resultados.
+
+
+## Puerta actual: actualización y Home por separado
+
+Entregar candidato 5a0247462e4b con bordes suaves, música y avisos apilados; no ampliar funciones. Antes de Home permanente, seguir RECUPERACION-INICIO-TCL.md: en el emulador el rol persiste pero el Home efectivo sigue siendo el original. No saltar esta limitación deshabilitando paquetes. La actualización visual autorizada por el usuario no autoriza cambiar HOME ni reiniciar la TCL.

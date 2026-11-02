@@ -5,7 +5,7 @@ import java.util.List;
 
 /** Small page stack. Keeps semantic focus keys, never hidden page views or an Activity reference. */
 final class SettingsNavigation {
-    enum Page { ROOT, HOME, COLUMNS, ROWS, APPEARANCE, SYSTEM, CREDITS }
+    enum Page { ROOT, HOME, COLUMNS, ROWS, APPEARANCE, SYSTEM, MEDIA, CREDITS }
     private static final class Entry {
         final Page page;
         String focus;
@@ -59,7 +59,7 @@ final class SettingsNavigation {
         switch (from) {
             case ROOT: return to == Page.HOME || to == Page.APPEARANCE || to == Page.SYSTEM;
             case HOME: return to == Page.COLUMNS || to == Page.ROWS;
-            case SYSTEM: return to == Page.CREDITS;
+            case SYSTEM: return to == Page.CREDITS || to == Page.MEDIA;
             default: return false;
         }
     }

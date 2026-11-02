@@ -155,7 +155,7 @@ final class ScenicBackdropDrawable extends Drawable {
         ((LoadTicket)value).cancelled=true;root.setTag(R.id.backdrop_load_job,null);return true;
     }
     /** Separable box blur, two passes over only 160x90 pixels. Never runs during drawing. */
-    private static void blur(Bitmap image) {
+    static void blur(Bitmap image) {
         int w=image.getWidth(),h=image.getHeight();
         int[] a=new int[w*h],b=new int[w*h];
         image.getPixels(a,0,w,0,0,w,h);

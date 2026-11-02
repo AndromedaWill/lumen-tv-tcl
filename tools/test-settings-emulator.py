@@ -71,6 +71,12 @@ try:
     u.keys('BACK'); u.shot('background-restored'); u.keys('BACK')
     expect('gallery-parent-focus', 'Fondos. Fijo')
     u.press('Sistema'); expect('settings-system', 'Ajustes'); capture('settings-system')
+    u.press('Reproducción multimedia'); expect('settings-media', 'Acceso multimedia. Acceso opcional'); capture('settings-media')
+    u.keys('DPAD_CENTER'); capture('media-access-disclosure')
+    nodes,_=u.dump('media-access-disclosure')
+    assert any('permiso es amplio' in n.get('text','') for n in nodes),'Full permission disclosure required'
+    u.keys('BACK'); expect('media-disclosure-cancelled','Acceso multimedia. Acceso opcional')
+    u.keys('BACK'); expect('media-parent-focus','Reproducción multimedia')
     u.press('Créditos y licencias'); expect('settings-credits', 'Inter'); capture('settings-credits')
     u.keys('DPAD_DOWN'); expect('credits-focus', 'Simple Icons')
     u.keys('BACK'); expect('credits-parent-focus', 'Créditos y licencias')

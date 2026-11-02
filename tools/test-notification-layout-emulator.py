@@ -1,4 +1,8 @@
-"""Check scrolling never paints over Control Center buttons. Does not grant notification access."""
+"""Archived revision-08 fixed-viewport regression (054/4B7); no notification access grant.
+
+Revision 09 intentionally scrolls the whole column, including controls. Its replacement
+coverage is test-media-panel-emulator.py (stacked notices, empty section and unified scroll).
+"""
 import argparse, json, re, time
 from pathlib import Path
 from PIL import Image, ImageChops

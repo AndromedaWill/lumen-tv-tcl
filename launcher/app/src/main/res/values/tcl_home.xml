@@ -1,4 +1,15 @@
 <resources>
+    <string name="media_playback">Reproducción multimedia</string>
+    <string name="media_previous">Pista anterior</string>
+    <string name="media_next">Pista siguiente</string>
+    <string name="media_pause">Pausar</string>
+    <string name="media_play">Reproducir</string>
+    <string name="media_access_manage">Acceso multimedia</string>
+    <string name="media_access_granted">Autorizado en Android</string>
+    <string name="media_access_optional">Acceso opcional</string>
+    <string name="media_access_summary">Android requiere acceso manual a notificaciones. Aquí puedes revisar qué permite y revocarlo. No se guarda un historial de música.</string>
+    <string name="media_settings_description">Controla la sesión de música desde el Centro de control cuando la aplicación lo permita.</string>
+    <string name="media_access_explanation">Android requiere acceso a notificaciones para controlar música de otras apps. El permiso es amplio; los filtros no lo limitan. No guardamos un historial. Puedes revocarlo en los ajustes de Android.</string>
     <item name="backdrop_load_job" type="id" />
     <string name="all_applications">Todas las aplicaciones</string>
     <string name="hercules_credit" translatable="false">Amanhecer no Hercules\nCarlos Perez Couto · CC BY-SA 3.0</string>
@@ -34,7 +45,7 @@
     <string name="control_native_panel">Panel de Google TV</string>
     <string name="control_unavailable_short">No disponible</string>
     <string name="native_panel_unavailable">Este panel no está disponible para el launcher en este firmware. Puedes acceder desde los controles originales de Google TV.</string>
-    <string name="notification_access_name">TCL Home · Notificaciones opcionales</string>
+    <string name="notification_access_name">TCL Home · Música y avisos opcionales</string>
     <string name="notification_optional">Desactivadas</string>
     <string name="notification_local_viewer">Visor local</string>
     <string name="notification_disconnected">Sin conexión al sistema</string>
@@ -45,7 +56,7 @@
     <string name="aerial_store_hint">Requiere Internet para descargar. Los guardados funcionan sin conexión. Se reservan 500 MB libres.</string>
     <string name="notification_reconnect">Volver a conectar el visor</string>
     <string name="notification_disconnected_explanation">El acceso está concedido, pero Android no ha conectado el visor. No se están recibiendo avisos. Puedes intentar conectarlo una vez, pausarlo o revocar el permiso. Los avisos propios del panel de Google TV pueden no estar disponibles para otras aplicaciones.</string>
-    <string name="notification_permission_explanation">Desactivado. Android solicita acceso amplio a las notificaciones. Los filtros solo cambian lo que muestra este visor; no reducen el alcance del permiso. No guardamos un historial.</string>
+    <string name="notification_permission_explanation">Acceso opcional a notificaciones y sesiones multimedia. Android solicita acceso amplio a las notificaciones. Los filtros solo cambian lo que muestra este visor; no reducen el alcance del permiso. No guardamos un historial.</string>
     <string name="notification_active_explanation">Visor activo. Solo avisos actuales, agrupados por aplicación y guardados en memoria. Los avisos permanentes y secretos se omiten. Puedes pausar el visor o revocar el acceso en Android.</string>
     <string name="notification_paused_explanation">Visor pausado y contenido en memoria borrado. El permiso de Android sigue concedido: puedes revocarlo en Gestionar permiso. Activar el visor vuelve a conectar el servicio autorizado.</string>
     <string name="notification_configure_access">Configurar acceso en Android</string>

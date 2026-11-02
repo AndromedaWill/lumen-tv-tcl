@@ -47,12 +47,17 @@ try:
     record('photo-change',dock_bounds_unchanged=True)
     # Test the actual existing emulator-owned six-second video through the system picker.
     u.launch_settings();u.press('Añadir imágenes');u.press('Importar un vídeo');u.keys('TAB')
-    nodes,_=u.dump('video-picker');items=[n for n in nodes if '00:06' in u.label(n)]
+    items=[]
+    for attempt in range(5):
+        nodes,_=u.dump('video-picker');items=[n for n in nodes if '00:06' in u.label(n)]
+        if items:break
+        time.sleep(1)  # Photo picker may have no accessibility root on its first post-boot frame.
     assert items,'The emulator-owned 6 s video fixture is required'
     assert 'photopicker' in u.call('shell','dumpsys','activity','activities').lower()
     x1,y1,x2,y2=u.rect(items[0]);u.call('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2));time.sleep(2)
     u.press('Usar este fondo');u.keys('BACK','BACK');top('pe.tclhome.prototype');time.sleep(2)
     assert dock('video-applied')==original;u.shot('video-applied')
+    u.keys('SETTINGS');time.sleep(1);u.shot('video-control-frost');u.keys('BACK')
     u.keys('BACK',*(['DPAD_LEFT']*7),'DPAD_RIGHT');assert u.label(u.dump('chosen')[1])=='Archivos'
     rec=subprocess.Popen(u.TARGET+['shell','screenrecord','--size','1280x720','--time-limit','20','--bit-rate','4000000','/sdcard/tcl-continuity-08.mp4'],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     time.sleep(1)

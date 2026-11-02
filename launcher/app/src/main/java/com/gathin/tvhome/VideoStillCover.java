@@ -97,6 +97,7 @@ final class VideoStillCover extends View {
         animate().cancel(); setAlpha(1); invalidate();
     }
     boolean hasStill(){return still!=null;}
+    Bitmap snapshot(){return still;}
     void whenReady(Runnable action){ready=action;if(still!=null)signalReady();}
     private void signalReady(){
         BackdropStartupGate.ready(root);Runnable action=ready;ready=null;if(action!=null&&!closed)action.run();

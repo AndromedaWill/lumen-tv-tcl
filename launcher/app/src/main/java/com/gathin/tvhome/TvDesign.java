@@ -32,6 +32,13 @@ final class TvDesign {
     static android.graphics.drawable.Drawable overlayPanel(Activity c,View host){
         return new FrostedControlDrawable(c,host,false,radius(c,R.dimen.ds_radius_panel),R.color.ds_overlay_fill);
     }
+    static void alertOverlay(Activity activity,android.app.AlertDialog dialog){
+        android.view.Window window=dialog.getWindow();
+        if(window!=null){
+            ContextFrostDrawable frost=new ContextFrostDrawable(activity,window.getDecorView());
+            window.setBackgroundDrawable(frost);window.setDimAmount(dim(activity));dialog.setOnDismissListener(ignored->frost.close());
+        }
+    }
     private static GradientDrawable gradient(Context c,int a,int b){return new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{color(c,a),color(c,b)});}
     static void control(Activity activity,TextView view,float radius){
         controlFrame(activity,view,radius);

@@ -36,4 +36,9 @@ public class SettingsNavigationTest {
         SettingsNavigation n = new SettingsNavigation(); n.focus("system"); n.push(SYSTEM, "credits"); n.push(CREDITS, "photo");
         n.pop(); assertEquals("credits", n.focus()); n.pop(); assertEquals("system", n.focus());
     }
+    @Test public void mediaReturnsToItsOwnSystemRow(){
+        SettingsNavigation n=new SettingsNavigation();n.focus("system");n.push(SYSTEM,"media");n.push(MEDIA,"media_access");
+        SettingsNavigation restored=SettingsNavigation.restore(n.pages(),n.focuses());
+        assertEquals(MEDIA,restored.page());restored.pop();assertEquals("media",restored.focus());
+    }
 }

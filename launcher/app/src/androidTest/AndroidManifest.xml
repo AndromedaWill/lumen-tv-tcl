@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <instrumentation android:name="com.gathin.tvhome.MediaPanelInstrumentation" android:targetPackage="pe.tclhome.prototype" android:label="Emulator media panel verification"/>
+</manifest>

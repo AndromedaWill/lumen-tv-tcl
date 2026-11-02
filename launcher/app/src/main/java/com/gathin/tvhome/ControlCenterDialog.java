@@ -23,15 +23,28 @@ final class ControlCenterDialog extends Dialog {
     private final Runnable inputs, customize, notifications;
     private final boolean motion;
     private NotificationsPanel notificationPanel;
+    private NowPlayingPanel musicPanel;
+    private NowPlayingSessions media;
+    private boolean hasMusic;
+    private final NowPlayingSessions.Source mediaSource;
+    private final NotificationsPanel.Source noticeSource;
     private final java.util.List<View> controls = new java.util.ArrayList<>();
 
     ControlCenterDialog(Activity activity, Runnable inputs, Runnable customize, Runnable notifications, boolean motion) {
+        this(activity,inputs,customize,notifications,motion,null,null);
+    }
+    ControlCenterDialog(Activity activity,Runnable inputs,Runnable customize,Runnable notifications,boolean motion,NowPlayingSessions.Source mediaSource){
+        this(activity,inputs,customize,notifications,motion,mediaSource,null);
+    }
+    ControlCenterDialog(Activity activity,Runnable inputs,Runnable customize,Runnable notifications,boolean motion,NowPlayingSessions.Source mediaSource,NotificationsPanel.Source noticeSource){
         super(activity);
         this.activity = activity;
         this.inputs = inputs;
         this.customize = customize;
         this.notifications=notifications;
         this.motion = motion;
+        this.mediaSource=mediaSource;
+        this.noticeSource=noticeSource==null?NotificationsPanel.live(activity):noticeSource;
     }
 
     private int dp(float n) { return Math.round(n * activity.getResources().getDisplayMetrics().density); }
@@ -41,7 +54,7 @@ final class ControlCenterDialog extends Dialog {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(14), dp(2), dp(14), dp(2));
+        panel.setPadding(dp(14), dp(10), dp(14), dp(24));
         panel.setClipChildren(false);
         panel.setClipToPadding(false);
         LinearLayout row = row(panel);
@@ -57,7 +70,7 @@ final class ControlCenterDialog extends Dialog {
                 NativePanels.resolve(activity,NativePanels.HOME)==null?R.string.control_unavailable_short:R.string.control_native_panel,
                 ()->NativePanels.open(activity,NativePanels.HOME));
         add(row,R.drawable.ic_bell,R.string.control_notifications,
-                HomeNotificationService.enabled(activity)?R.string.notification_local_viewer:R.string.notification_optional,
+                noticeSource.current().enabled?R.string.notification_local_viewer:R.string.notification_optional,
                 this::focusNotifications);
         controls.get(5).setOnClickListener(v->focusNotifications());
         row=row(panel,38);
@@ -67,8 +80,13 @@ final class ControlCenterDialog extends Dialog {
         pair=pair(row);
         addCompact(pair,R.drawable.ic_bluetooth,R.string.control_bluetooth,()->launch(Settings.ACTION_BLUETOOTH_SETTINGS));
         addCompact(pair,R.drawable.ic_apps,R.string.control_apps,()->launch(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-        notificationPanel=new NotificationsPanel(activity,notifications);
+        notificationPanel=new NotificationsPanel(activity,notifications,noticeSource);
+        media=new NowPlayingSessions(activity,this::updateMusic,mediaSource);
+        musicPanel=new NowPlayingPanel(activity,media,motion);musicPanel.setVisibility(View.GONE);
+        musicPanel.upTo(controls.get(6),controls.get(9));
+        LinearLayout.LayoutParams musicParams=new LinearLayout.LayoutParams(-1,-2);musicParams.topMargin=dp(8);panel.addView(musicPanel,musicParams);
         LinearLayout.LayoutParams noticeParams=new LinearLayout.LayoutParams(-1,-2);noticeParams.topMargin=dp(8);panel.addView(notificationPanel,noticeParams);
+        notificationPanel.onEmptyFocus=()->{if(hasMusic&&musicPanel.hasControls())musicPanel.focusFirst();else controls.get(5).requestFocus();};
         int[][] positions={{0,1},{2,3},{4,5},{6,7,8,9}};
         for(int r=0;r<positions.length;r++)for(int col=0;col<positions[r].length;col++){
             int[] here=positions[r];View v=controls.get(here[col]);
@@ -81,12 +99,8 @@ final class ControlCenterDialog extends Dialog {
                 if(direction<0)v.setNextFocusUpId(id);else v.setNextFocusDownId(id);
             }
         }
-        android.widget.ScrollView scroll=new android.widget.ScrollView(activity){
-            @Override protected void onMeasure(int width,int height){
-                int available=Math.max(dp(180),Math.round(activity.getResources().getDisplayMetrics().heightPixels*806f/1080f)-dp(96));
-                super.onMeasure(width,View.MeasureSpec.makeMeasureSpec(available,View.MeasureSpec.AT_MOST));
-            }
-        };scroll.setVerticalScrollBarEnabled(false);scroll.addView(panel);setContentView(scroll);
+        EdgeFadeScrollView scroll=new EdgeFadeScrollView(activity);
+        scroll.addView(panel);setContentView(scroll);
         controls.get(0).requestFocus();
     }
 
@@ -104,6 +118,16 @@ final class ControlCenterDialog extends Dialog {
         params.height = WindowManager.LayoutParams.WRAP_CONTENT;
         params.dimAmount = TvDesign.dim(activity);
         w.setAttributes(params);
+    }
+
+    @Override protected void onStart(){super.onStart();if(media!=null)media.start();}
+    @Override protected void onStop(){if(media!=null)media.close();if(musicPanel!=null)musicPanel.clear();super.onStop();}
+    private void updateMusic(NowPlayingSessions.Snapshot snapshot){
+        boolean focused=musicPanel.hasFocus();hasMusic=snapshot!=null;
+        if(snapshot!=null)musicPanel.show(snapshot);else musicPanel.clear();
+        musicPanel.setVisibility(hasMusic?View.VISIBLE:View.GONE);
+        notificationPanel.upTo(hasMusic&&musicPanel.hasControls()?musicPanel.lastControl():controls.get(8));
+        if(focused&&(!hasMusic||!musicPanel.hasControls()))controls.get(6).requestFocus();
     }
 
     private LinearLayout row(LinearLayout panel) {
@@ -215,13 +239,19 @@ final class ControlCenterDialog extends Dialog {
     void focusNotifications(){if(notificationPanel!=null)notificationPanel.focusFirst();}
     @Override public boolean dispatchKeyEvent(android.view.KeyEvent event){
         if(event.getAction()==android.view.KeyEvent.ACTION_DOWN&&event.getKeyCode()==android.view.KeyEvent.KEYCODE_DPAD_DOWN){
-            for(int i=6;i<controls.size();i++)if(controls.get(i).hasFocus()){focusNotifications();return true;}
+            for(int i=6;i<controls.size();i++)if(controls.get(i).hasFocus()){
+                if(hasMusic&&musicPanel.hasControls()){musicPanel.focusFirst();return true;}
+                notificationPanel.focusIfAny();return true;
+            }
+            if(musicPanel!=null&&musicPanel.hasFocus()){notificationPanel.focusIfAny();return true;}
         }
         return super.dispatchKeyEvent(event);
     }
     @Override public void onBackPressed(){
         if(notificationPanel!=null&&notificationPanel.hasFocus()){
             if(!notificationPanel.back())controls.get(5).requestFocus();
+        }else if(musicPanel!=null&&musicPanel.hasFocus()){
+            controls.get(6).requestFocus();
         }else super.onBackPressed();
     }
 }

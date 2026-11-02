@@ -7,7 +7,16 @@ import android.widget.*;
 import java.util.*;
 
 /** Compact, on-demand viewer inside Control Center. Permission disclosure expands only on request. */
-final class NotificationsPanel extends ScrollView {
+final class NotificationsPanel extends LinearLayout {
+    interface Source { State current(); void observe(Runnable observer); }
+    static final class State {
+        final boolean access,enabled,connected;final List<NotificationBuffer.Notice> notices;
+        State(boolean access,boolean enabled,boolean connected,List<NotificationBuffer.Notice> notices){this.access=access;this.enabled=enabled;this.connected=connected;this.notices=notices;}
+    }
+    static Source live(Activity activity){return new Source(){
+        public State current(){return new State(HomeNotificationService.hasAccess(activity),HomeNotificationService.enabled(activity),HomeNotificationService.connected(),HomeNotificationService.BUFFER.snapshot());}
+        public void observe(Runnable observer){HomeNotificationService.observe(observer);}
+    };}
     private final Activity activity;
     private final Runnable configure;
     private final LinearLayout body;
@@ -16,25 +25,20 @@ final class NotificationsPanel extends ScrollView {
     private String expanded;
     private final Map<String,android.graphics.drawable.Drawable> icons=new HashMap<>();
     private View first;
+    private View upTarget;
+    private final Source source;
+    Runnable onEmptyFocus;
     NotificationsPanel(Activity activity,Runnable configure){
-        super(activity);this.activity=activity;this.configure=configure;setFillViewport(false);setVerticalScrollBarEnabled(false);
-        setClipChildren(true);setClipToPadding(true);setOverScrollMode(OVER_SCROLL_NEVER);
+        this(activity,configure,live(activity));
+    }
+    NotificationsPanel(Activity activity,Runnable configure,Source source){
+        super(activity);this.activity=activity;this.configure=configure;this.source=source;setOrientation(VERTICAL);
+        setClipChildren(true);setClipToPadding(true);
         body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);addView(body);render();
     }
     private int dp(int x){return Math.round(x*getResources().getDisplayMetrics().density);}
-    @Override protected void onMeasure(int w,int h){
-        int limit=dp(100);
-        if(MeasureSpec.getMode(h)!=MeasureSpec.UNSPECIFIED)limit=Math.min(limit,MeasureSpec.getSize(h));
-        super.onMeasure(w,MeasureSpec.makeMeasureSpec(limit,MeasureSpec.AT_MOST));
-    }
-    @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){
-        super.onSizeChanged(w,h,oldw,oldh);
-        // The Control Center deliberately permits focus elevation outside its rows. This viewport
-        // must still clip its scrolled descendants, including backgrounds, to its own fixed region.
-        setClipBounds(new android.graphics.Rect(0,0,w,h));
-    }
-    @Override protected void onAttachedToWindow(){super.onAttachedToWindow();HomeNotificationService.observe(changed);render();}
-    @Override protected void onDetachedFromWindow(){HomeNotificationService.observe(null);icons.clear();super.onDetachedFromWindow();}
+    @Override protected void onAttachedToWindow(){super.onAttachedToWindow();source.observe(changed);render();}
+    @Override protected void onDetachedFromWindow(){source.observe(null);icons.clear();super.onDetachedFromWindow();}
     private TextView text(String value,int size,int color){TextView v=new TextView(activity);TvDesign.typography(v,size==12?TvDesign.Type.META:TvDesign.Type.COMPACT);v.setText(value);v.setTextColor(color);return v;}
     private TextView action(String title,String subtitle,Runnable click){
         TextView v=text(title+(subtitle.isEmpty()?"":"\n"+subtitle),13,Color.WHITE);v.setId(View.generateViewId());v.setTag(title);
@@ -46,19 +50,24 @@ final class NotificationsPanel extends ScrollView {
     private void style(TextView v,boolean focus){
         v.setBackground(new FrostedControlDrawable(activity,v,focus));v.setTextColor(TvDesign.color(activity,focus?R.color.ds_text_focused:R.color.ds_text_primary));
     }
-    void focusFirst(){if(first!=null)first.requestFocus();}
+    void focusFirst(){if(first==null){details=true;render();}if(first!=null)first.requestFocus();}
+    boolean focusIfAny(){if(first==null)return false;first.requestFocus();return true;}
+    void upTo(View target){upTarget=target;if(first!=null)first.setNextFocusUpId(target.getId());}
     private void restoreFocus(Object tag){View view=tag==null?null:body.findViewWithTag(tag);if(view!=null)view.requestFocus();}
-    boolean back(){if(!details)return false;details=false;render();focusFirst();return true;}
+    boolean back(){if(!details)return false;details=false;render();if(first!=null)first.requestFocus();return true;}
     private void render(){
-        Object focused=body.findFocus()==null?null:body.findFocus().getTag();body.removeAllViews();first=null;
-        boolean access=HomeNotificationService.hasAccess(activity),enabled=HomeNotificationService.enabled(activity);
-        setBackground(details?TvDesign.panel(activity,this):null);setClipToOutline(details);
-        int padding=details?dp(12):0;body.setPadding(padding,details?dp(10):0,padding,details?dp(10):0);
+        boolean wasFocused=hasFocus();Object focused=body.findFocus()==null?null:body.findFocus().getTag();body.removeAllViews();first=null;
+        State current=source.current();boolean access=current.access,enabled=current.enabled;
+        if(!access){HomeNotificationService.BUFFER.clear();if(HomeNotificationService.prefs(activity).getBoolean("enabled",false))HomeNotificationService.setEnabled(activity,false);}
+        boolean content=details||enabled&&current.connected&&!current.notices.isEmpty();
+        setVisibility(content?VISIBLE:GONE);setBackground(null);
+        body.setPadding(0,0,0,0);
+        if(!content){icons.clear();if(wasFocused&&onEmptyFocus!=null)post(onEmptyFocus);return;}
         if(details||enabled)body.addView(text(activity.getString(R.string.control_notifications),13,TvDesign.color(activity,R.color.ds_text_secondary)));
         if(!enabled)icons.clear();
         if(!access){HomeNotificationService.BUFFER.clear();if(HomeNotificationService.prefs(activity).getBoolean("enabled",false))HomeNotificationService.setEnabled(activity,false);}
         if(details){
-            boolean connected=HomeNotificationService.connected();
+            boolean connected=current.connected;
             TextView explanation=text(activity.getString(!access?R.string.notification_permission_explanation:enabled?(connected?R.string.notification_active_explanation:R.string.notification_disconnected_explanation):R.string.notification_paused_explanation),12,TvDesign.color(activity,R.color.ds_text_secondary));
             explanation.setPadding(0,dp(8),0,dp(4));explanation.setFocusable(true);explanation.setTag("permission-explanation");body.addView(explanation);first=explanation;
             action(activity.getString(access?R.string.notification_manage_access:R.string.notification_configure_access),"",configure);
@@ -66,16 +75,8 @@ final class NotificationsPanel extends ScrollView {
             if(access)action(activity.getString(enabled?R.string.notification_pause:R.string.notification_enable),"",()->{HomeNotificationService.setEnabled(activity,!enabled);render();});
             if(enabled){boolean quiet=HomeNotificationService.prefs(activity).getBoolean("show_quiet",false);
                 action(activity.getString(quiet?R.string.notification_quiet_shown:R.string.notification_quiet_hidden),"",()->{HomeNotificationService.prefs(activity).edit().putBoolean("show_quiet",!quiet).apply();HomeNotificationService.refreshFilters();render();});}
-        }else if(!enabled){
-            action(access?"Visor pausado":"Notificaciones desactivadas","",()->{details=true;render();focusFirst();});
         }else{
-            List<NotificationBuffer.Notice> notices=HomeNotificationService.BUFFER.snapshot();
-            if(!HomeNotificationService.connected()){
-                action(activity.getString(R.string.notification_disconnected),"",()->{details=true;render();focusFirst();});
-                restoreFocus(focused);
-                return;
-            }
-            if(notices.isEmpty())action("Sin notificaciones pendientes","Opciones",()->{details=true;render();focusFirst();});
+            List<NotificationBuffer.Notice> notices=current.notices;
             for(NotificationBuffer.Notice n:notices){
                 String name;try{name=String.valueOf(activity.getPackageManager().getApplicationLabel(activity.getPackageManager().getApplicationInfo(n.pkg,0)));}catch(Exception unavailable){name=n.pkg;}
                 String source=Cards.cleanLabel(name,n.pkg);
@@ -85,9 +86,11 @@ final class NotificationsPanel extends ScrollView {
                 v.setContentDescription(source+". "+n.title+". "+n.body);
                 try{android.graphics.drawable.Drawable icon=icons.get(n.pkg);if(icon==null){icon=activity.getPackageManager().getApplicationIcon(n.pkg);icons.put(n.pkg,icon);}icon.setBounds(0,0,dp(20),dp(20));v.setCompoundDrawables(icon,null,null,null);v.setCompoundDrawablePadding(dp(8));}catch(Exception unavailable){ }
             }
-            Set<String> current=new HashSet<>();for(NotificationBuffer.Notice n:notices)current.add(n.pkg);icons.keySet().retainAll(current);
+            Set<String> packages=new HashSet<>();for(NotificationBuffer.Notice n:notices)packages.add(n.pkg);icons.keySet().retainAll(packages);
             if(!notices.isEmpty())action("Opciones","",()->{details=true;render();focusFirst();});
         }
         restoreFocus(focused);
+        if(upTarget!=null&&first!=null)first.setNextFocusUpId(upTarget.getId());
+        if(wasFocused&&!hasFocus()&&first!=null)first.requestFocus();
     }
 }

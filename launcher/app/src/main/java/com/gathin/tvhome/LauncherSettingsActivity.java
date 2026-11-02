@@ -49,6 +49,7 @@ public final class LauncherSettingsActivity extends Activity {
         super.onActivityResult(request, result, data);
         if (request == BACKGROUNDS) { if (result == RESULT_OK) markChanged(false); render(); }
     }
+    @Override protected void onResume(){super.onResume();if(navigation!=null&&navigation.page()==SettingsNavigation.Page.MEDIA)render();}
 
     private String s(int id) { return getString(id); }
     private String yes(boolean value) { return s(value ? R.string.settings_yes : R.string.settings_no); }
@@ -122,12 +123,19 @@ public final class LauncherSettingsActivity extends Activity {
                 break;
             case SYSTEM:
                 title = R.string.settings_system;
+                row(rows, "media", R.string.media_playback, s(HomeNotificationService.hasAccess(this)?R.string.media_access_granted:R.string.media_access_optional), R.string.media_settings_description,
+                        R.drawable.ic_music_note, true, true, () -> push(SettingsNavigation.Page.MEDIA, "media_access"));
                 row(rows, "native", R.string.tv_settings, s(R.string.control_native), R.string.settings_native_description,
                         R.drawable.ic_settings, true, true, () -> open(SystemSettings.intent(this, Settings.ACTION_SETTINGS)));
                 row(rows, "default_home", R.string.home_settings, s(R.string.settings_open_picker), R.string.home_settings_help,
                         R.drawable.ic_home_settings, true, true, () -> open(new Intent(Settings.ACTION_HOME_SETTINGS)));
                 row(rows, "credits", R.string.settings_credits, "", R.string.settings_credits_description, R.drawable.ic_picture, true, true,
                         () -> push(SettingsNavigation.Page.CREDITS, "font"));
+                break;
+            case MEDIA:
+                title=R.string.media_playback;
+                row(rows,"media_access",R.string.media_access_manage,s(HomeNotificationService.hasAccess(this)?R.string.media_access_granted:R.string.media_access_optional),R.string.media_access_summary,
+                        R.drawable.ic_music_note,false,true,this::mediaAccess);
                 break;
             case CREDITS:
                 title = R.string.settings_credits;
@@ -178,5 +186,17 @@ public final class LauncherSettingsActivity extends Activity {
     private void open(Intent intent) {
         try { startActivity(intent); }
         catch (ActivityNotFoundException | SecurityException missing) { Toast.makeText(this, R.string.not_available, Toast.LENGTH_LONG).show(); }
+    }
+    private void mediaAccess(){
+        AlertDialog disclosure=new AlertDialog.Builder(this).setTitle(R.string.media_playback).setMessage(R.string.media_access_explanation)
+                .setPositiveButton(R.string.notification_manage_access,(dialog,which)->{
+                    Intent intent=new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+                    android.content.pm.ResolveInfo match=getPackageManager().resolveActivity(intent,0);
+                    if(match==null||match.activityInfo==null||!match.activityInfo.exported||match.activityInfo.name.contains("CTSDummy")){
+                        Toast.makeText(this,R.string.notification_access_unavailable,Toast.LENGTH_LONG).show();return;
+                    }
+                    open(intent);
+                }).setNegativeButton(android.R.string.cancel,null).create();
+        disclosure.setOnShowListener(dialog->TvDesign.alertOverlay(this,disclosure));disclosure.show();
     }
 }
