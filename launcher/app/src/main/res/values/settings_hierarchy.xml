@@ -1,0 +1,39 @@
+<resources>
+    <string name="settings_appearance">Apariencia</string>
+    <string name="settings_backgrounds">Fondos</string>
+    <string name="settings_system">Sistema</string>
+    <string name="settings_home_description">Organiza el dock, las filas de aplicaciones y tu saludo de bienvenida.</string>
+    <string name="settings_appearance_description">Ajusta el movimiento y los efectos visuales. Puedes mantener una apariencia ligera.</string>
+    <string name="settings_backgrounds_description">Elige una imagen o un vídeo, configura horarios o inicia una presentación con tu colección.</string>
+    <string name="settings_system_description">Accede a los ajustes del televisor, el selector de Inicio y las licencias.</string>
+    <string name="settings_columns_description">Elige cuántas aplicaciones aparecen en cada fila. Los iconos conservan sus proporciones.</string>
+    <string name="settings_rows_description">Elige las filas visibles debajo del dock. Con cero, puedes bajar para recorrer el catálogo completo.</string>
+    <string name="settings_greeting_name">Nombre para el saludo</string>
+    <string name="settings_greeting_description">Nombre local para tu bienvenida. El saludo se desvanece a los pocos segundos. Tu cuenta de Google no cambia.</string>
+    <string name="settings_animations">Animaciones</string>
+    <string name="settings_animations_description">Activa el movimiento de foco y las transiciones. Desactívalo si prefieres cambios inmediatos.</string>
+    <string name="settings_yes">Sí</string>
+    <string name="settings_no">No</string>
+    <string name="settings_saved_value">Valor seleccionado</string>
+    <string name="settings_app_count">%1$d aplicaciones</string>
+    <string name="settings_no_rows">Ninguna</string>
+    <plurals name="settings_row_count">
+        <item quantity="one">%d fila</item>
+        <item quantity="other">%d filas</item>
+    </plurals>
+    <string name="settings_custom">Personalizado</string>
+    <string name="settings_from_theme">Del tema</string>
+    <string name="settings_theme_description">Recupera la distribución y el movimiento del tema. Tu nombre y tu colección de fondos se conservan.</string>
+    <string name="settings_native_description">Abre los ajustes originales de imagen, sonido y demás funciones del televisor.</string>
+    <string name="settings_open_picker">Abrir selector</string>
+    <string name="settings_apply">Aplicar</string>
+    <string name="settings_save">Guardar</string>
+    <string name="settings_credits">Créditos y licencias</string>
+    <string name="settings_credits_description">Información de las fuentes, iconos y fotografías usados por el launcher.</string>
+    <string name="settings_font_credit">La tipografía Inter se distribuye bajo SIL Open Font License 1.1.</string>
+    <string name="settings_icons_credit">Los símbolos de marcas de Simple Icons usan CC0. Las marcas pertenecen a sus propietarios.</string>
+    <string name="settings_photo_credit">Fotografía alternativa</string>
+    <string name="settings_fixed">Fijo</string>
+    <string name="settings_scheduled">Por horario</string>
+    <string name="settings_slideshow">Presentación</string>
+</resources>

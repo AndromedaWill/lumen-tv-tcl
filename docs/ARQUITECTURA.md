@@ -66,3 +66,10 @@ El material compartido pasa a cristal acromático: muestra la miniatura neutral 
 VideoStillCover espera la copia acotada y publica la cubierta antes de iniciar la app, dando un fotograma al dibujo normal para que la transición no capture una raíz ajena o una SurfaceView ya liberada. `videoFreezeMs` incluye ese intervalo total. La espera de copia es de hasta 96ms más el fotograma de presentación; no es una garantía de tiempo real si el hilo principal está ocupado. Las muestras observadas variaron: 33ms en una versión previa, 158ms en la grabación final verificada y 47–113ms en cinco ciclos sin grabación. También se conserva una muestra de 310ms bajo carga. Son cifras de emulador, no de la TCL.
 
 Los modales de Fondos y Personalizar conservan intactos los controles de su pantalla base. El oscurecimiento se aplica solo mediante la ventana y el token compartido; no existe un helper que oculte o atenúe individualmente sus vistas. La prueba visual comprueba también contexto visible y retorno de foco.
+
+
+## Etapa 07 · Ajustes jerárquicos
+
+`SettingsNavigation` es una pila pura de páginas y claves de foco validada con pruebas JVM; no guarda Views ni Context. `SettingsPageView` comparte composición, filas, selección y navegación de las páginas visibles. `LauncherSettingsActivity` conserva la lógica de preferencias, apertura de la galería y accesos nativos: solo carga Config al crear la Activity o restablecer el tema, no en cada push/pop. Se conservan las preferencias existentes y las entradas públicas de la Activity; no hay servicios o permisos nuevos.
+
+Se elimina la antigua plantilla XML plana y sus estilos ya sin consumidores. `TvDesign.controlFrame` es la base de estados de las filas compuestas y de los controles TextView existentes. `overlayPanel` comparte el cristal con un cuerpo neutral de mayor cobertura para menús con texto sobre otros controles. Los cambios no ocultan la pantalla base.

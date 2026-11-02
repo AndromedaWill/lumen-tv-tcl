@@ -29,14 +29,20 @@ final class TvDesign {
     static android.graphics.drawable.Drawable panel(Activity c,View host){
         return new FrostedControlDrawable(c,host,false,radius(c,R.dimen.ds_radius_panel));
     }
+    static android.graphics.drawable.Drawable overlayPanel(Activity c,View host){
+        return new FrostedControlDrawable(c,host,false,radius(c,R.dimen.ds_radius_panel),R.color.ds_overlay_fill);
+    }
     private static GradientDrawable gradient(Context c,int a,int b){return new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{color(c,a),color(c,b)});}
     static void control(Activity activity,TextView view,float radius){
+        controlFrame(activity,view,radius);
+        view.setTextColor(new ColorStateList(new int[][]{{android.R.attr.state_focused},{android.R.attr.state_pressed},{}},new int[]{color(activity,R.color.ds_text_focused),color(activity,R.color.ds_text_focused),color(activity,R.color.ds_text_primary)}));
+    }
+    static void controlFrame(Activity activity,View view,float radius){
         StateListDrawable states=new StateListDrawable();
         states.addState(new int[]{android.R.attr.state_focused},new LiquidGlassDrawable(radius,color(activity,R.color.ds_focus_fill)));
         states.addState(new int[]{android.R.attr.state_pressed},new LiquidGlassDrawable(radius,color(activity,R.color.ds_focus_fill)));
         states.addState(new int[]{android.R.attr.state_selected},new LiquidGlassDrawable(radius,color(activity,R.color.ds_selected_fill)));
         states.addState(new int[]{},new LiquidGlassDrawable(radius,color(activity,R.color.ds_control_fill)));view.setBackground(states);
-        view.setTextColor(new ColorStateList(new int[][]{{android.R.attr.state_focused},{android.R.attr.state_pressed},{}},new int[]{color(activity,R.color.ds_text_focused),color(activity,R.color.ds_text_focused),color(activity,R.color.ds_text_primary)}));
     }
     static void settingsTree(Activity activity,View root){
         if(root instanceof TextView){TextView text=(TextView)root;

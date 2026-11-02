@@ -42,3 +42,12 @@ Después: corregir regresiones físicas, aprobar diseño y preparar una prueba i
 Se amplía la galería a modos Fijo (imagen/vídeo), Horario (2–12 imágenes) y Presentación, manteniendo las seis imágenes iniciales. Primero validar edición por mando, importación real por selector, persistencia y liberación de vídeo en emulador. Los cambios importantes de diseño se muestran antes/después bajo [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md); ese documento rige las funciones futuras. No añadir nuevos efectos mientras se revisa esta entrega.
 
 Después de la validación local: aprobación visual y autorización independiente de actualización en la TCL. Allí repetir el caso de vídeo observado por el usuario y el paso dock/catálogo con medidas controladas. Las cifras del emulador no sustituyen esta puerta. Conservar EC8011 y sus datos como referencia. El cambio a Inicio principal, las notificaciones activas, HDMI y cualquier limpieza de paquetes siguen siendo pruebas separadas autorizadas.
+
+
+## Etapa 07 solicitada: rendimiento y Ajustes primero
+
+1. Caracterizar la diferencia de jank con A–B–B–A y separar UI de esperas de presentación; conservar y revertir los ensayos sin beneficio demostrado. JANK-07.md contiene datos y límites, sin declarar cerrado el caso físico.
+2. Implementar categorías/subpáginas compartidas con valores, selección y foco persistidos. Verificar D-pad, Atrás, guardado, reconstrucción y retorno de la galería a ambas resoluciones.
+3. Retirar la etiqueta de los botones compactos y reforzar ligeramente el material del menú superpuesto, manteniendo la transparencia de los demás controles y el contexto inferior.
+4. Presentar comparativas y resultados para aprobación. Alias locales HDMI, recientes de lanzamientos propios y futuras personalizaciones se mantienen **para la siguiente etapa**, después de aprobar esta. No añadirlas a este candidato.
+5. La actualización/medición de la TCL necesita autorización independiente; HOME permanece otra prueba. No usar desactivación de servicios ni cambios globales para mejorar resultados.

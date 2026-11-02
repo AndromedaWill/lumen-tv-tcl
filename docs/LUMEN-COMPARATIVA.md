@@ -89,3 +89,7 @@ Seis estados reales antes y seis después, a 720p y 1080p, D-pad y Atrás, sin c
 Los colores importantes futuros se consultarán al usuario con muestras antes de implementarlos. Esta pasada solo reutiliza los neutros ya solicitados y no cambia la dirección de color. No hubo instalación ni lectura/escritura en la TCL real.
 
 La comparación de los seis estados confirma idénticos bounds, textos, focusable y foco antes/después (27–28 nodos por estado). `geometry-comparison.json` conserva el resultado; no cambió ninguna caja o ruta para conseguir la nueva tinta.
+
+## Implementación posterior · etapa 07
+
+La jerarquía de Ajustes que figura como pendiente en esta comparación ya está implementada para aprobación: categorías, subpáginas con valores y selección, pila pequeña de claves de foco y Atrás por nivel. Se mantiene un único árbol visible y no se introduce un gestor global de zonas. El menú textual de Fondos refuerza su cobertura neutra, conservando el contexto inferior, y el Centro de control elimina la etiqueta visual de sus accesos compactos. [Entrega y capturas](ETAPA-07.md), [caracterización de jank y optimización localizada](JANK-07.md). Alias HDMI, recientes y demás ampliaciones continúan pendientes; no se presentan como funciones existentes.

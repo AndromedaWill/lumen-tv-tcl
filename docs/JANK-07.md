@@ -63,3 +63,23 @@ python tools/compare-navigation-emulator.py --serial emulator-5554 --baseline ar
 La herramienta rechaza un serial físico y restaura el candidato al terminar; conserva preferencias, no cambia HOME. No ejecutar compilaciones ni capturas de vídeo al mismo tiempo. El histograma conserva todos sus fotogramas; las etapas derivadas describen solo el anillo final. El primer Down se registra separado, sin convertirlo en una medida de botón remoto.
 
 La comprobación final contra el candidato jerárquico, y las medidas propias de sus Ajustes, se añaden en [ETAPA-07.md](ETAPA-07.md). **Estado del problema: caracterizado, no cerrado en hardware.** Antes de declarar fluidez final, repetir la ruta y tomar una traza limitada del paquete en la TCL con autorización. No bajar resolución/densidad del televisor, tocar escalas globales ni desactivar servicios para mejorar estos números.
+
+
+## Ajustes: evitar relayout de la descripción lateral
+
+Se aisló un segundo coste del prototipo jerárquico: la descripción lateral tenía altura wrap_content y cambiar de opción podía pedir otra medición de la página. Se reserva su espacio disponible y se alinea el texto arriba, conservando la posición del contenido. El cambio solo afecta a `SettingsPageView`; no añade cachés de imágenes, servicios o capas GPU.
+
+A–B–B–A entre A502 (altura dinámica) y 39264 (espacio reservado), veinte Down/Up por muestra, cuarenta fotogramas registrados. Mismo aspecto y mismo recorrido de categorías:
+
+| Orden | Descripción | p50 / p95 / p99, ms | UI p95, ms | Layout p95, ms |
+|---|---|---|---:|---:|
+| A1 | Dinámica | 21 / 44 / 48 | 2.083 | 0.928 |
+| B1 | Reservada | 18 / 19 / 34 | 1.575 | 0.856 |
+| B2 | Reservada | 18 / 18 / 19 | 1.041 | 0.457 |
+| A2 | Dinámica | 17 / 22 / 34 | 2.287 | 1.339 |
+
+La ronda respalda reducir trabajo de UI/layout. Son dos muestras por variante y no se promete que la misma mejora se reproduzca en la TCL. PSS de ambas variantes se solapa; no se declara una reducción de memoria. Datos completos: `artifacts/stage-07/description-abba/`. Se conserva esta corrección de layout y se comprueba visualmente que los textos y controles no se desplazan.
+
+El contador moderno de jank marca 100% en esos cuarenta cambios aislados **en ambas variantes**. La referencia de Ajustes planos 10DB también da 100% con ese contador, mientras el legado y los percentiles son diferentes. Se conservan todos: no se sustituye silenciosamente uno por otro ni se interpreta ese porcentaje aislado como FPS. En la ronda 10DB/A502, una muestra de A502 llegó a p99=300ms; sigue visible en `settings-abba/`, no se elimina como si nunca hubiera ocurrido. El protocolo no permite determinar si una anomalía del pipeline o trabajo de la app explica cada outlier. Para la decisión se contrastan etapas, distribución, estado visual y finalmente hardware.
+
+La mejora medida en Ajustes **no cierra el caso del dock/catálogo**. Esa ruta requiere la validación física posterior autorizada, con traza si continúa la pausa que percibe el usuario.

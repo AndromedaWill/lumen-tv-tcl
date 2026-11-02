@@ -22,7 +22,6 @@ final class ControlCenterDialog extends Dialog {
     private final Activity activity;
     private final Runnable inputs, customize, notifications;
     private final boolean motion;
-    private TextView compactLabel;
     private NotificationsPanel notificationPanel;
     private final java.util.List<View> controls = new java.util.ArrayList<>();
 
@@ -68,8 +67,6 @@ final class ControlCenterDialog extends Dialog {
         pair=pair(row);
         addCompact(pair,R.drawable.ic_bluetooth,R.string.control_bluetooth,()->launch(Settings.ACTION_BLUETOOTH_SETTINGS));
         addCompact(pair,R.drawable.ic_apps,R.string.control_apps,()->launch(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-        compactLabel=text(R.string.control_sound,12,TvDesign.color(activity,R.color.ds_text_secondary));compactLabel.setGravity(Gravity.CENTER);compactLabel.setAlpha(0);
-        panel.addView(compactLabel,new LinearLayout.LayoutParams(-1,dp(12)));
         notificationPanel=new NotificationsPanel(activity,notifications);
         LinearLayout.LayoutParams noticeParams=new LinearLayout.LayoutParams(-1,-2);panel.addView(notificationPanel,noticeParams);
         int[][] positions={{0,1},{2,3},{4,5},{6,7,8,9}};
@@ -166,7 +163,6 @@ final class ControlCenterDialog extends Dialog {
         LinearLayout.LayoutParams subParams=new LinearLayout.LayoutParams(-1,-2);subParams.topMargin=dp(1);labels.addView(sub,subParams);
         tile.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         tile.setOnFocusChangeListener((v, focused) -> {
-            if(focused && compactLabel!=null)compactLabel.setAlpha(0);
             tile.setBackground(new FrostedControlDrawable(activity, tile, focused));
             name.setEllipsize(focused&&motion?android.text.TextUtils.TruncateAt.MARQUEE:android.text.TextUtils.TruncateAt.END);
             sub.setEllipsize(focused&&motion?android.text.TextUtils.TruncateAt.MARQUEE:android.text.TextUtils.TruncateAt.END);
@@ -204,7 +200,6 @@ final class ControlCenterDialog extends Dialog {
         tile.setOnFocusChangeListener((v,focused)->{
             tile.setBackground(new FrostedControlDrawable(activity,tile,focused,radii));
             glyph.setColorFilter(TvDesign.color(activity,focused?R.color.ds_icon_focused:R.color.ds_icon_primary));
-            if(compactLabel!=null){compactLabel.setText(title);compactLabel.setAlpha(focused?1:0);}
             v.animate().cancel();
             if(motion)v.animate().scaleX(focused?1.025f:1).scaleY(focused?1.025f:1).setDuration(TvDesign.focusDuration(activity)).start();
         });

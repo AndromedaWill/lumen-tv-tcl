@@ -11,6 +11,7 @@
     <color name="ds_icon_focused">#303030</color>
     <color name="ds_focus_fill">#D4F4F4F4</color>
     <color name="ds_glass_fill">#4A181818</color>
+    <color name="ds_overlay_fill">#88181818</color>
     <color name="ds_glass_fallback">#40262626</color>
     <color name="ds_control_fill">#18262626</color>
     <color name="ds_selected_fill">#30545454</color>

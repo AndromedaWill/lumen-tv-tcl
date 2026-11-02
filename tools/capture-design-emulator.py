@@ -22,6 +22,6 @@ try:
  u.press('Reloj y calendario');shot('calendar-next');u.keys('DPAD_LEFT');shot('calendar-previous');u.keys('BACK')
  u.press('Ajustes');shot('control-focused');u.keys('DPAD_RIGHT');shot('control-resting');u.keys('DPAD_DOWN','DPAD_DOWN','DPAD_DOWN','DPAD_DOWN');shot('notifications-off');u.keys('BACK','BACK')
  u.call('shell','am','start','-W','-a','com.gathin.tvhome.action.LAUNCHER_SETTINGS','-n','pe.tclhome.prototype/com.gathin.tvhome.MainActivity');time.sleep(1)
- shot('customize-focused');u.keys('DPAD_LEFT');shot('customize-resting');u.press('Fondos');time.sleep(1);shot('backgrounds-controls');u.focus('Vista previa');shot('backgrounds-preview');u.keys('BACK','BACK')
+ shot('customize-focused');u.keys('DPAD_DOWN');shot('customize-resting');u.press('Fondos');time.sleep(1);shot('backgrounds-controls');u.focus('Vista previa');shot('backgrounds-preview');u.keys('BACK','BACK')
  (u.OUT/'capture.json').write_text(json.dumps({'serial':a.serial,'height':a.height,'apk_sha256':apk_sha256,'method':'Real screencap; D-pad only; no permission grants','original_size':original_size,'original_density':original_density},indent=2))
 finally:restore('size',original_size);restore('density',original_density)

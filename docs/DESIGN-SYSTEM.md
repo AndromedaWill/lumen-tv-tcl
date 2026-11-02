@@ -135,3 +135,20 @@ Los fades de entrada de un panel y los indicadores de foco parten de alpha cero 
 Se contrastó la revisión pública 2.1.0 de Lumen (`b21cb5c`) con sus documentos y código efectivos; véase [LUMEN-COMPARATIVA.md](LUMEN-COMPARATIVA.md). Es nuestra referencia visual principal; sus scripts webOS/root y sus resultados GPU no se trasladan a Android. Se conservan las distribuciones y el contexto aprobados. Un catálogo, una fila de acción y el dock comparten reglas, con materiales distintos por función; no se deben envolver automáticamente unos en otros.
 
 Se completan los roles de tinta secundarios/glyphs: `ds_text_secondary_focused`, `ds_icon_primary` y `ds_icon_focused`. Centro de control y la explicación de notificaciones dejan de tener valores azulados literales distintos entre su primer dibujo y los posteriores estados de foco. El cambio no añade vistas, efectos o trabajo periódico. Las capturas comparadas en `artifacts/lumen-review/` verifican que los bounds y la navegación no cambian.
+
+
+## Etapa 07 · jerarquía y material de menús superpuestos
+
+A petición del usuario, Ajustes pasa a categorías Inicio, Apariencia, Fondos y Sistema. `SettingsNavigation` conserva página y clave semántica de foco por nivel; `SettingsPageView` construye solo la página visible. La columna lateral ocupa el 38% y la lista el 62%; filas de 52dp con separación de 8dp, título 28sp, etiquetas 16sp y valores 14sp. Toda página y elección comparte este componente y `TvDesign.controlFrame`, sin estilos locales por submenú. Los títulos/valores se mantienen a una línea, con desplazamiento al enfocar si hace falta. Los detalles se muestran en la columna lateral.
+
+Las elecciones de columnas/filas abren una página y vuelven a la fila original tras guardar. ✓ identifica el valor persistido incluso al enfocar otro. Atrás vuelve exactamente un nivel; desde la raíz cierra Ajustes. Guardar el estado permite recreación de Activity sin perder profundidad o foco. Fondos sigue en su galería existente y al regresar mantiene su fila en Ajustes. No hay pantallas precargadas a alpha 0.01 ni un gestor global de foco.
+
+El usuario pidió algo más de cobertura **en el menú textual superpuesto**. Se añade el rol `ds_overlay_fill=#88181818`, con el mismo RGB neutro que `ds_glass_fill`; no se cambian paleta, tinte o foco. `TvDesign.overlayPanel` conserva bordes/forma/muestreo del cristal, reforzando solo el cuerpo del menú de Fondos. La superficie sigue siendo translúcida y la pantalla inferior no cambia de alpha, visibilidad o posición. El resto del Centro de control/Calendario conserva el cristal aprobado. Es una variante por función, no una nueva receta por pantalla.
+
+Se elimina la etiqueta visual compartida «Sonido» y su reserva de 12dp bajo los botones compactos del Centro de control, tal como solicitó el usuario. Los nombres accesibles de los iconos permanecen. Las etiquetas de los accesos superiores no se cambian.
+
+Apple recomienda la variante regular para alertas/popovers con bastante texto o riesgo de perder legibilidad sobre el fondo; mantener contexto no significa permitir que ambos textos compitan. Nuestra aproximación en Android refuerza el velo neutro, sin añadir blur vivo o copiar efectos propietarios. [Materials](https://developer.apple.com/design/human-interface-guidelines/materials). Lumen usa páginas para las elecciones de Ajustes: [referencia](https://github.com/samrenfrew/lumen-webos/blob/b21cb5cb7f766d37046aff8e121e4d7dbdc3e1cb/docs/plans/settings-redesign.md).
+
+Capturas de la etapa: `artifacts/stage-07/review.html`, con estados activos, selección en reposo y deshabilitados a 720p y 1080p. El jank se caracteriza por separado en [JANK-07.md](JANK-07.md); este rediseño no autoriza ampliaciones ni instalación física antes de revisión.
+
+La descripción lateral de Ajustes ocupa una región estable, alineada arriba. Cambiar el foco actualiza el texto y el glyph sin variar esa geometría. Esta regla reduce trabajo de layout sin alterar píxeles, ni añadir capas o cachés gráficas; no se generaliza a textos de longitud ilimitada.

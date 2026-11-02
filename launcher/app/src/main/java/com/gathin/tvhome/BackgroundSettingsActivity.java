@@ -150,7 +150,7 @@ public final class BackgroundSettingsActivity extends Activity {
     private String interval(){return store.intervalSeconds<60?store.intervalSeconds+" s":store.intervalSeconds/60+" min";}
     private Dialog dialog(String title){
         Dialog d=new Dialog(this);activeDialog=d;d.setOnDismissListener(ignored->{if(activeDialog==d)activeDialog=null;});d.requestWindowFeature(Window.FEATURE_NO_TITLE);ScrollView scroll=new ScrollView(this);
-        LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(18),dp(14),dp(18),dp(14));body.setBackground(TvDesign.panel(this,body));body.addView(text(title,18));scroll.addView(body);d.setContentView(scroll);
+        LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(18),dp(14),dp(18),dp(14));body.setBackground(TvDesign.overlayPanel(this,body));body.addView(text(title,18));scroll.addView(body);d.setContentView(scroll);
         d.findViewById(android.R.id.content).setTag(body);Window w=d.getWindow();if(w!=null){w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));w.setLayout(dp(340),-2);w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);WindowManager.LayoutParams p=w.getAttributes();p.dimAmount=TvDesign.dim(this);w.setAttributes(p);}return d;
     }
     private void choose(String title,String[] values,java.util.function.IntConsumer action){Dialog d=dialog(title);LinearLayout body=(LinearLayout)d.findViewById(android.R.id.content).getTag();for(int i=0;i<values.length;i++){int at=i;button(body,values[i],()->{d.dismiss();action.accept(at);});}d.show();body.getChildAt(1).requestFocus();}
