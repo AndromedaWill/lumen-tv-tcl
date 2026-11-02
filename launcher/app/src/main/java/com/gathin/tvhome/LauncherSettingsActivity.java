@@ -15,10 +15,12 @@ import java.util.List;
 /** Settings controller. Only the current page is built; the stack stores page/focus keys. */
 public final class LauncherSettingsActivity extends Activity {
     private static final int BACKGROUNDS = 73;
+    static final String RECREATE_EXTRA = "com.gathin.tvhome.settings.RECREATE";
     private SharedPreferences choices;
     private SettingsNavigation navigation;
     private SettingsPageView page;
     private boolean changed;
+    private boolean recreateHome;
     private int columns, rowsBelowDock;
     private boolean animations, advancedEffects;
 
@@ -29,13 +31,14 @@ public final class LauncherSettingsActivity extends Activity {
         navigation = state == null ? new SettingsNavigation()
                 : SettingsNavigation.restore(state.getStringArray("pages"), state.getStringArray("focuses"));
         changed = state != null && state.getBoolean("changed");
-        if (changed) setResult(RESULT_OK);
+        recreateHome = state != null && state.getBoolean("recreateHome");
+        if (changed) reportChanged();
         page = new SettingsPageView(this, navigation::focus); setContentView(page); render();
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
         state.putStringArray("pages", navigation.pages()); state.putStringArray("focuses", navigation.focuses());
-        state.putBoolean("changed", changed); super.onSaveInstanceState(state);
+        state.putBoolean("changed", changed); state.putBoolean("recreateHome", recreateHome); super.onSaveInstanceState(state);
     }
 
     @Override public void onBackPressed() {
@@ -44,12 +47,14 @@ public final class LauncherSettingsActivity extends Activity {
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
-        if (request == BACKGROUNDS) { if (result == RESULT_OK) markChanged(); render(); }
+        if (request == BACKGROUNDS) { if (result == RESULT_OK) markChanged(false); render(); }
     }
 
     private String s(int id) { return getString(id); }
     private String yes(boolean value) { return s(value ? R.string.settings_yes : R.string.settings_no); }
-    private void markChanged() { changed = true; setResult(RESULT_OK); }
+    private void reportChanged() { setResult(RESULT_OK,new Intent().putExtra(RECREATE_EXTRA,recreateHome)); }
+    private void markChanged() { markChanged(true); }
+    private void markChanged(boolean rebuild) { changed = true; recreateHome |= rebuild; reportChanged(); }
     private void push(SettingsNavigation.Page target, String focus) { navigation.push(target, focus); render(); }
     private void choose(String key, int value) {
         choices.edit().putInt(key, value).apply();
@@ -167,7 +172,7 @@ public final class LauncherSettingsActivity extends Activity {
         new AlertDialog.Builder(this).setTitle(R.string.settings_greeting_name).setMessage(R.string.settings_greeting_description).setView(input)
                 .setPositiveButton(R.string.settings_save, (d, w) -> {
                     String name = input.getText().toString().replaceAll("[\\p{Cntrl}]", "").trim();
-                    getSharedPreferences("home_profile", 0).edit().putString("name", name).apply(); markChanged(); render();
+                    getSharedPreferences("home_profile", 0).edit().putString("name", name).apply(); markChanged(false); render();
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
     private void open(Intent intent) {

@@ -136,13 +136,17 @@ final class AerialDownloads {
                     main.post(() -> progress.update(-1, msg));
                     return;
                 }
-                long done = 0;
+                long done = 0, nextSpaceCheck = 4L << 20;
                 int last = -1;
                 try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(part)) {
                     byte[] buf = new byte[1 << 16];
                     for (int n; (n = in.read(buf)) > 0; ) {
                         out.write(buf, 0, n);
                         done += n;
+                        if(done>=nextSpaceCheck){
+                            if(new StatFs(d.getPath()).getAvailableBytes()<KEEP_FREE)throw new IOException("storage reserve reached");
+                            nextSpaceCheck=done+(4L<<20);
+                        }
                         int pct = total > 0 ? (int) (done * 100 / total) : 0;
                         if (pct != last) {
                             last = pct;
@@ -152,6 +156,7 @@ final class AerialDownloads {
                         }
                     }
                 }
+                if(done==0 || (total>0 && done!=total))throw new IOException("incomplete download");
                 File dest = new File(d, a.file);
                 if (!part.renameTo(dest)) throw new IOException("rename failed");
                 addToIndex(d, a);
@@ -168,6 +173,9 @@ final class AerialDownloads {
     }
 
     /** Removes an aerial and its aerials.json entry. */
+    static void removeAsync(Context ctx,Aerial aerial,Runnable done){
+        Context app=ctx.getApplicationContext();worker.execute(()->{remove(app,aerial);main.post(done);});
+    }
     static void remove(Context ctx, Aerial a) {
         File d = dir(ctx);
         if (d == null) return;

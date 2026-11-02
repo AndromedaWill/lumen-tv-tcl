@@ -152,3 +152,9 @@ Apple recomienda la variante regular para alertas/popovers con bastante texto o 
 Capturas de la etapa: `artifacts/stage-07/review.html`, con estados activos, selección en reposo y deshabilitados a 720p y 1080p. El jank se caracteriza por separado en [JANK-07.md](JANK-07.md); este rediseño no autoriza ampliaciones ni instalación física antes de revisión.
 
 La descripción lateral de Ajustes ocupa una región estable, alineada arriba. Cambiar el foco actualiza el texto y el glyph sin variar esa geometría. Esta regla reduce trabajo de layout sin alterar píxeles, ni añadir capas o cachés gráficas; no se generaliza a textos de longitud ilimitada.
+
+## Revisión 08 · contenido desplazable y continuidad
+
+El área de avisos respeta una separación de 8dp debajo de los accesos compactos. Su viewport conserva el cristal y recorta sus descendientes aunque el contenedor del Centro de control permita elevación fuera de las filas. No colocar el material de panel en el cuerpo largo que se desplaza. Verificar dibujo real además de bounds de accesibilidad: estos últimos no detectaban la superposición observada en la TCL.
+
+Una cubierta de vídeo comparte las sombras del vídeo; no debe cambiar el brillo al aparecer. Al salir, congelar la composición visible; liberar decodificador inmediatamente y retirar la superficie cuando la ventana esté oculta. El primer dibujo de una selección personal no usa otra fotografía como placeholder. Los cambios de fondo mantienen la geometría del dock. [Auditoría y límites](REVISION-08.md).

@@ -21,6 +21,7 @@ final class PersonalBackground {
     private boolean active;
     private String displayed="";
     private AerialBackdrop video;
+    private AerialBackdrop retiring;
     private boolean usingLegacy;
     private final BroadcastReceiver clock=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){update();}};
     PersonalBackground(Activity a,View root,boolean motion){activity=a;this.root=root;this.motion=motion;}
@@ -32,8 +33,10 @@ final class PersonalBackground {
         if(Build.VERSION.SDK_INT>=33)activity.registerReceiver(clock,f,Context.RECEIVER_NOT_EXPORTED);else activity.registerReceiver(clock,f);
         update();if(video!=null)video.resume();
     }
-    void stop(){handler.removeCallbacks(due);if(active){active=false;activity.unregisterReceiver(clock);}if(video!=null)video.pause();if(!usingLegacy&&ScenicBackdropDrawable.cancelPending(root))displayed="";ScenicBackdropDrawable.stop(root);}
-    void close(){stop();if(video!=null){video.close();video=null;}}
+    void stop(){handler.removeCallbacks(due);if(active){active=false;activity.unregisterReceiver(clock);}if(video!=null)video.pause();if(!usingLegacy&&ScenicBackdropDrawable.cancelPending(root))displayed="";ScenicBackdropDrawable.freeze(root);}
+    void hidden(){if(video!=null)video.hidden();if(retiring!=null)retiring.hidden();}
+    void close(){stop();if(video!=null){video.close();video=null;}finishRetiring();}
+    private void finishRetiring(){if(retiring!=null){retiring.close();retiring=null;}root.setTag(R.id.background_video_visible,video!=null);}
     void beforeAppLaunch(Runnable launch){if(video!=null)video.beforeAppLaunch(launch);else launch.run();}
     void update(){
         if(!active)return;handler.removeCallbacks(due);BackgroundStore s=BackgroundStore.load(activity);usingLegacy=LEGACY.equals(s.mode);if(usingLegacy)return;
@@ -59,13 +62,25 @@ final class PersonalBackground {
         if(selected==null)return;File file=BackgroundStore.file(activity,selected);
         String key=selected.id+":"+selected.source+":"+(file==null?0:file.lastModified());
         if(key.equals(displayed))return;displayed=key;
-        if(video!=null){video.close();video=null;}
+        if(video!=null){
+            video.pause();
+            if(video.hasStill()){if(retiring!=null)retiring.close();retiring=video;}
+            else video.close();
+            video=null;
+        }
         if(selected.video){
             ScenicBackdropDrawable.cancelPending(root);
-            if(root instanceof FrameLayout){video=AerialBackdrop.attachFile(activity,(FrameLayout)root,0,file);if(video!=null)video.resume();}
+            if(root instanceof FrameLayout){
+                video=AerialBackdrop.attachFile(activity,(FrameLayout)root,0,file);
+                if(video!=null){
+                    AerialBackdrop selectedVideo=video;
+                    video.setGridFocused(Boolean.TRUE.equals(root.getTag(R.id.grid)),false);
+                    video.whenReady(()->{if(video==selectedVideo)finishRetiring();});video.resume();
+                }
+            }
         }else{
             Context app=activity.getApplicationContext();BackgroundStore.Item image=selected;
-            ScenicBackdropDrawable.load(activity,root,()->BackgroundStore.open(app,image),false,motion&&s.transitions);
+            ScenicBackdropDrawable.load(activity,root,()->BackgroundStore.open(app,image),false,motion&&s.transitions&&retiring==null,this::finishRetiring);
         }
     }
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- View tags holding each tile's springs (TvFocusMotion). -->
 <resources>
+    <item name="backdrop_startup_gate" type="id" />
     <item name="background_still" type="id" />
     <item name="motion_scale_x" type="id" />
     <item name="motion_scale_y" type="id" />

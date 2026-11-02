@@ -34,6 +34,9 @@ final class ScenicBackdropDrawable extends Drawable {
         load(activity,target,()->resources.openRawResource(R.raw.hercules),true,false);
     }
     static void load(Activity activity, View target, Source input, boolean legacyTint, boolean animate) {
+        load(activity,target,input,legacyTint,animate,null);
+    }
+    static void load(Activity activity, View target, Source input, boolean legacyTint, boolean animate,Runnable applied) {
         Object previous=target.getTag(R.id.backdrop_load_job);
         if(previous instanceof LoadTicket) ((LoadTicket)previous).cancelled=true;
         LoadTicket ticket=new LoadTicket(activity,target);
@@ -41,9 +44,9 @@ final class ScenicBackdropDrawable extends Drawable {
         android.content.res.Resources resources=activity.getResources();
         int width=target.getWidth()>0?target.getWidth():resources.getDisplayMetrics().widthPixels;
         int height=target.getHeight()>0?target.getHeight():resources.getDisplayMetrics().heightPixels;
-        new Thread(() -> prepare(resources,width,height,ticket,input,legacyTint,animate),"home-photo-prepare").start();
+        new Thread(() -> prepare(resources,width,height,ticket,input,legacyTint,animate,applied),"home-photo-prepare").start();
     }
-    private static void prepare(android.content.res.Resources resources, int width, int height, LoadTicket ticket, Source input, boolean legacyTint, boolean animate) {
+    private static void prepare(android.content.res.Resources resources, int width, int height, LoadTicket ticket, Source input, boolean legacyTint, boolean animate,Runnable applied) {
         Bitmap source=null,photo=null,frost=null,neutral=null;
         try {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
@@ -116,11 +119,20 @@ final class ScenicBackdropDrawable extends Drawable {
                 view.setBackground(drawable);
                 drawable.setLower(Boolean.TRUE.equals(view.getTag(R.id.grid)),false);
                 if(animate && owner.hasWindowFocus())drawable.appearFrom(old);
+                if(applied!=null)applied.run();
+                if(!Boolean.TRUE.equals(view.getTag(R.id.background_video_visible)))BackdropStartupGate.ready(view);
             });
             if(queued){photo=null;frost=null;neutral=null;} // Ownership moves to UI; never recycle published bitmaps.
         } catch(java.io.IOException | RuntimeException | OutOfMemoryError failure) {
             android.util.Log.w("TCLHomePerf","background prepareFailed="+failure.getClass().getSimpleName());
-            // The existing HorizonDrawable remains visible, rather than attaching an empty image.
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{
+                View view=ticket.view.get();
+                if(view!=null&&view.getTag(R.id.backdrop_load_job)==ticket){
+                    view.setTag(R.id.backdrop_load_job,null);
+                    if(!Boolean.TRUE.equals(view.getTag(R.id.background_video_visible)))BackdropStartupGate.ready(view);
+                }
+            });
+            // Retain an existing selected image; a cold failure uses the neutral screen, never another scene.
         } finally {
             if(source!=null)source.recycle();
             if(photo!=null)photo.recycle();
@@ -193,6 +205,14 @@ final class ScenicBackdropDrawable extends Drawable {
             if(d.transition!=null){d.transition.cancel();d.transition=null;}
             d.blend=d.lower?1:0;
             d.finishCrossfade();
+        }
+    }
+    /** Freeze the visible exit composition; settle/release crossfade resources once hidden. */
+    static void freeze(View root) {
+        if(root!=null && root.getBackground() instanceof ScenicBackdropDrawable){
+            ScenicBackdropDrawable d=(ScenicBackdropDrawable)root.getBackground();
+            if(d.transition!=null){d.transition.cancel();d.transition=null;}
+            if(d.crossfade!=null){d.crossfade.cancel();d.crossfade=null;}
         }
     }
     private void appearFrom(Drawable old) {

@@ -20,6 +20,7 @@ public final class HomeNotificationService extends NotificationListenerService {
     private static boolean scheduled;
     private static final Runnable DELIVER=()->{scheduled=false;if(observer!=null)observer.run();};
     private long callbacks,cpuNanos;
+    private boolean listenerConnected;
     static SharedPreferences prefs(Context context){return context.getSharedPreferences("notification_viewer",0);}
     static ComponentName component(Context context){return new ComponentName(context,HomeNotificationService.class);}
     static boolean hasAccess(Context context){
@@ -30,6 +31,7 @@ public final class HomeNotificationService extends NotificationListenerService {
         }catch(RuntimeException unavailable){return false;}
     }
     static boolean enabled(Context context){return prefs(context).getBoolean("enabled",false)&&hasAccess(context);}
+    static boolean connected(){HomeNotificationService service=current.get();return service!=null&&service.listenerConnected;}
     static void setEnabled(Context context,boolean value){
         prefs(context).edit().putBoolean("enabled",value).apply();
         if(value&&hasAccess(context)){
@@ -40,8 +42,8 @@ public final class HomeNotificationService extends NotificationListenerService {
     static void publish(){if(observer!=null&&!scheduled){scheduled=true;UI.postDelayed(DELIVER,150);}}
     static void refreshFilters(){HomeNotificationService service=current.get();if(service!=null)service.refresh();}
     @Override public void onListenerConnected(){
-        current=new WeakReference<>(this);
-        if(!enabled(this)){BUFFER.clear();requestUnbind();return;}
+        current=new WeakReference<>(this);listenerConnected=true;
+        if(!enabled(this)){listenerConnected=false;current.clear();BUFFER.clear();requestUnbind();publish();return;}
         refresh();
     }
     private void refresh(){
@@ -77,10 +79,11 @@ public final class HomeNotificationService extends NotificationListenerService {
         return value.subSequence(0,length).toString();
     }
     @Override public void onNotificationRemoved(StatusBarNotification notice){if(notice!=null)BUFFER.remove(notice.getKey());publish();}
-    @Override public void onListenerDisconnected(){BUFFER.clear();if(current.get()==this)current.clear();publish();}
-    @Override public void onDestroy(){BUFFER.clear();if(current.get()==this)current.clear();publish();super.onDestroy();}
+    @Override public void onListenerDisconnected(){listenerConnected=false;BUFFER.clear();if(current.get()==this)current.clear();publish();}
+    @Override public void onDestroy(){listenerConnected=false;BUFFER.clear();if(current.get()==this)current.clear();publish();super.onDestroy();}
     @Override protected void dump(java.io.FileDescriptor fd,java.io.PrintWriter writer,String[] args){
         writer.println("Optional notification viewer: counts only; no notification content");
         writer.println("callbacks="+callbacks+" callbackCpuNanos="+cpuNanos+" retainedNotices="+BUFFER.snapshot().size());
+        writer.println("listenerConnected="+listenerConnected);
     }
 }

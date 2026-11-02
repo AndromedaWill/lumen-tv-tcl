@@ -19,6 +19,13 @@ import java.util.function.ToIntFunction;
 final class RemoteKeys {
     private RemoteKeys() { }
 
+    /** Foreground Home only. Never install a global hook for these keys. */
+    static boolean isControlCenterKey(int keycode,int[] configured) {
+        if(keycode==KeyEvent.KEYCODE_SETTINGS || keycode==KeyEvent.KEYCODE_NOTIFICATION)return true;
+        for(int code:configured)if(code==keycode)return true;
+        return false;
+    }
+
     /** keycode -> package, with key names resolved by Android. */
     static Map<Integer, String> parseAppKeys(String[] entries) {
         return parseAppKeys(Arrays.asList(entries), KeyEvent::keyCodeFromString);

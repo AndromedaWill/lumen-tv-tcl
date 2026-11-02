@@ -81,7 +81,10 @@ public final class BackgroundSettingsActivity extends Activity {
             button(options,"Editar este fondo…",this::edit);
             button(options,"Fundido · "+(store.transitions?"Activado":"Desactivado"),()->{store.transitions=!store.transitions;save();renderOptions();});
         }
-        button(options,"Añadir imágenes o vídeo…",()->choose("Añadir a tu colección",new String[]{"Importar imágenes…","Importar un vídeo…","Aéreos ya descargados"},i->{if(i<2)pick(i==1,null);else aerials();}));
+        button(options,"Añadir imágenes o vídeo…",()->choose("Añadir a tu colección",new String[]{"Importar imágenes…","Importar un vídeo…","Aéreos ya descargados","Descargar vídeos aéreos…"},i->{if(i<2)pick(i==1,null);else if(i==2)aerials();else{
+            AerialStoreDialog storeDialog=new AerialStoreDialog(this,this::addAerial);activeDialog=storeDialog;
+            storeDialog.setOnDismissListener(d->{if(activeDialog==storeDialog)activeDialog=null;});storeDialog.show();
+        }}));
         button(options,"Colección · "+store.items.size()+" fondos",()->choose("Colección",new String[]{"Editar fondo seleccionado","Restablecer las seis imágenes iniciales","Conservar fondos del tema heredado"},i->{if(i==0)edit();else if(i==1)confirm("Se quitarán las copias importadas de esta colección; los archivos originales y vídeos aéreos no se modifican.",this::reset);else{store.mode=BackgroundStore.LEGACY;save();status.setText("Fondos del tema seleccionados. Pulsa Atrás para volver a Inicio.");}}));
         status.setText(BackgroundStore.SCHEDULE.equals(editingMode)?store.images(true).size()+" imágenes en horario · entre 2 y 12 · hora local":BackgroundStore.SLIDESHOW.equals(editingMode)?store.images(false).size()+" imágenes · solo mientras Inicio es visible":current().video?"Vista previa estática · el vídeo se reproduce en Inicio":"Elige un fondo de tu colección.");
     }
@@ -173,7 +176,14 @@ public final class BackgroundSettingsActivity extends Activity {
         });
     }
     private void aerials(){if(store.items.size()>=BackgroundStore.LIMIT){status.setText("Colección completa.");return;}List<String[]> all=AerialBackdrop.catalog(this);if(all.isEmpty()){status.setText("No hay vídeos aéreos descargados. Puedes importar tu propio vídeo.");return;}
-        choose("Aéreos guardados",all.stream().map(v->v[1]).toArray(String[]::new),i->{String[] a=all.get(i);BackgroundStore.Item item=new BackgroundStore.Item(UUID.randomUUID().toString(),a[1],"aerial:"+a[0],true,false,0);store.items.add(item);selected=item.id;save();renderCollection();showPreview();});}
+        choose("Aéreos guardados",all.stream().map(v->v[1]).toArray(String[]::new),i->{String[] a=all.get(i);addAerial(a[1],a[0]);});}
+    private void addAerial(AerialDownloads.Aerial aerial){addAerial(aerial.title,aerial.file);}
+    private void addAerial(String title,String file){
+        for(BackgroundStore.Item existing:store.items)if(existing.source.equals("aerial:"+file)){selected=existing.id;showPreview();return;}
+        if(store.items.size()>=BackgroundStore.LIMIT){status.setText("Colección completa: elimina un fondo antes de añadir otro.");return;}
+        BackgroundStore.Item item=new BackgroundStore.Item(UUID.randomUUID().toString(),title,"aerial:"+file,true,false,0);
+        store.items.add(item);selected=item.id;save();renderOptions();renderCollection();showPreview();
+    }
     private void reset(){List<BackgroundStore.Item> previous=new ArrayList<>(store.items);store=BackgroundStore.defaults(this);store.mode=BackgroundStore.SCHEDULE;for(int i=0;i<store.items.size();i++)store.items.get(i).source="asset:"+(i+1);selected=store.fixed;editingMode=store.mode;save();media.discardUnused(this,previous);renderOptions();renderCollection();showPreview();}
     @Override protected void onSaveInstanceState(Bundle b){b.putString("selected",selected);b.putString("editing",editingMode);b.putString("replace",pendingReplace);b.putBoolean("video",pendingVideo);super.onSaveInstanceState(b);}
     @Override protected void onStart(){super.onStart();BackgroundStore.prefs(this).registerOnSharedPreferenceChangeListener(collectionChanged);}

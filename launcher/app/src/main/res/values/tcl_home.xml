@@ -37,6 +37,14 @@
     <string name="notification_access_name">TCL Home · Notificaciones opcionales</string>
     <string name="notification_optional">Desactivadas</string>
     <string name="notification_local_viewer">Visor local</string>
+    <string name="notification_disconnected">Sin conexión al sistema</string>
+    <string name="aerial_store_title">Vídeos aéreos</string>
+    <string name="aerial_store_remove">Eliminar descarga</string>
+    <string name="aerial_store_delete">¿Eliminar este vídeo descargado del almacenamiento del launcher?</string>
+    <string name="aerial_store_in_use">Este vídeo sigue en tu colección o está seleccionado en el tema. Elige otro y quítalo de la colección antes de eliminar la descarga.</string>
+    <string name="aerial_store_hint">Requiere Internet para descargar. Los guardados funcionan sin conexión. Se reservan 500 MB libres.</string>
+    <string name="notification_reconnect">Volver a conectar el visor</string>
+    <string name="notification_disconnected_explanation">El acceso está concedido, pero Android no ha conectado el visor. No se están recibiendo avisos. Puedes intentar conectarlo una vez, pausarlo o revocar el permiso. Los avisos propios del panel de Google TV pueden no estar disponibles para otras aplicaciones.</string>
     <string name="notification_permission_explanation">Desactivado. Android solicita acceso amplio a las notificaciones. Los filtros solo cambian lo que muestra este visor; no reducen el alcance del permiso. No guardamos un historial.</string>
     <string name="notification_active_explanation">Visor activo. Solo avisos actuales, agrupados por aplicación y guardados en memoria. Los avisos permanentes y secretos se omiten. Puedes pausar el visor o revocar el acceso en Android.</string>
     <string name="notification_paused_explanation">Visor pausado y contenido en memoria borrado. El permiso de Android sigue concedido: puedes revocarlo en Gestionar permiso. Activar el visor vuelve a conectar el servicio autorizado.</string>

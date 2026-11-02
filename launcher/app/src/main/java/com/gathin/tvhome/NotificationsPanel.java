@@ -18,10 +18,21 @@ final class NotificationsPanel extends ScrollView {
     private View first;
     NotificationsPanel(Activity activity,Runnable configure){
         super(activity);this.activity=activity;this.configure=configure;setFillViewport(false);setVerticalScrollBarEnabled(false);
+        setClipChildren(true);setClipToPadding(true);setOverScrollMode(OVER_SCROLL_NEVER);
         body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);addView(body);render();
     }
     private int dp(int x){return Math.round(x*getResources().getDisplayMetrics().density);}
-    @Override protected void onMeasure(int w,int h){super.onMeasure(w,MeasureSpec.makeMeasureSpec(dp(100),MeasureSpec.AT_MOST));}
+    @Override protected void onMeasure(int w,int h){
+        int limit=dp(100);
+        if(MeasureSpec.getMode(h)!=MeasureSpec.UNSPECIFIED)limit=Math.min(limit,MeasureSpec.getSize(h));
+        super.onMeasure(w,MeasureSpec.makeMeasureSpec(limit,MeasureSpec.AT_MOST));
+    }
+    @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){
+        super.onSizeChanged(w,h,oldw,oldh);
+        // The Control Center deliberately permits focus elevation outside its rows. This viewport
+        // must still clip its scrolled descendants, including backgrounds, to its own fixed region.
+        setClipBounds(new android.graphics.Rect(0,0,w,h));
+    }
     @Override protected void onAttachedToWindow(){super.onAttachedToWindow();HomeNotificationService.observe(changed);render();}
     @Override protected void onDetachedFromWindow(){HomeNotificationService.observe(null);icons.clear();super.onDetachedFromWindow();}
     private TextView text(String value,int size,int color){TextView v=new TextView(activity);TvDesign.typography(v,size==12?TvDesign.Type.META:TvDesign.Type.COMPACT);v.setText(value);v.setTextColor(color);return v;}
@@ -36,18 +47,22 @@ final class NotificationsPanel extends ScrollView {
         v.setBackground(new FrostedControlDrawable(activity,v,focus));v.setTextColor(TvDesign.color(activity,focus?R.color.ds_text_focused:R.color.ds_text_primary));
     }
     void focusFirst(){if(first!=null)first.requestFocus();}
+    private void restoreFocus(Object tag){View view=tag==null?null:body.findViewWithTag(tag);if(view!=null)view.requestFocus();}
     boolean back(){if(!details)return false;details=false;render();focusFirst();return true;}
     private void render(){
         Object focused=body.findFocus()==null?null:body.findFocus().getTag();body.removeAllViews();first=null;
         boolean access=HomeNotificationService.hasAccess(activity),enabled=HomeNotificationService.enabled(activity);
-        body.setBackground(details?TvDesign.panel(activity,body):null);int padding=details?dp(12):0;body.setPadding(padding,details?dp(10):0,padding,details?dp(10):0);
+        setBackground(details?TvDesign.panel(activity,this):null);setClipToOutline(details);
+        int padding=details?dp(12):0;body.setPadding(padding,details?dp(10):0,padding,details?dp(10):0);
         if(details||enabled)body.addView(text(activity.getString(R.string.control_notifications),13,TvDesign.color(activity,R.color.ds_text_secondary)));
         if(!enabled)icons.clear();
         if(!access){HomeNotificationService.BUFFER.clear();if(HomeNotificationService.prefs(activity).getBoolean("enabled",false))HomeNotificationService.setEnabled(activity,false);}
         if(details){
-            TextView explanation=text(activity.getString(!access?R.string.notification_permission_explanation:enabled?R.string.notification_active_explanation:R.string.notification_paused_explanation),12,TvDesign.color(activity,R.color.ds_text_secondary));
+            boolean connected=HomeNotificationService.connected();
+            TextView explanation=text(activity.getString(!access?R.string.notification_permission_explanation:enabled?(connected?R.string.notification_active_explanation:R.string.notification_disconnected_explanation):R.string.notification_paused_explanation),12,TvDesign.color(activity,R.color.ds_text_secondary));
             explanation.setPadding(0,dp(8),0,dp(4));explanation.setFocusable(true);explanation.setTag("permission-explanation");body.addView(explanation);first=explanation;
             action(activity.getString(access?R.string.notification_manage_access:R.string.notification_configure_access),"",configure);
+            if(enabled&&!connected)action(activity.getString(R.string.notification_reconnect),"",()->{HomeNotificationService.setEnabled(activity,true);render();});
             if(access)action(activity.getString(enabled?R.string.notification_pause:R.string.notification_enable),"",()->{HomeNotificationService.setEnabled(activity,!enabled);render();});
             if(enabled){boolean quiet=HomeNotificationService.prefs(activity).getBoolean("show_quiet",false);
                 action(activity.getString(quiet?R.string.notification_quiet_shown:R.string.notification_quiet_hidden),"",()->{HomeNotificationService.prefs(activity).edit().putBoolean("show_quiet",!quiet).apply();HomeNotificationService.refreshFilters();render();});}
@@ -55,6 +70,11 @@ final class NotificationsPanel extends ScrollView {
             action(access?"Visor pausado":"Notificaciones desactivadas","",()->{details=true;render();focusFirst();});
         }else{
             List<NotificationBuffer.Notice> notices=HomeNotificationService.BUFFER.snapshot();
+            if(!HomeNotificationService.connected()){
+                action(activity.getString(R.string.notification_disconnected),"",()->{details=true;render();focusFirst();});
+                restoreFocus(focused);
+                return;
+            }
             if(notices.isEmpty())action("Sin notificaciones pendientes","Opciones",()->{details=true;render();focusFirst();});
             for(NotificationBuffer.Notice n:notices){
                 String name;try{name=String.valueOf(activity.getPackageManager().getApplicationLabel(activity.getPackageManager().getApplicationInfo(n.pkg,0)));}catch(Exception unavailable){name=n.pkg;}
@@ -68,6 +88,6 @@ final class NotificationsPanel extends ScrollView {
             Set<String> current=new HashSet<>();for(NotificationBuffer.Notice n:notices)current.add(n.pkg);icons.keySet().retainAll(current);
             if(!notices.isEmpty())action("Opciones","",()->{details=true;render();focusFirst();});
         }
-        View restored=focused==null?null:body.findViewWithTag(focused);if(restored!=null)restored.requestFocus();
+        restoreFocus(focused);
     }
 }

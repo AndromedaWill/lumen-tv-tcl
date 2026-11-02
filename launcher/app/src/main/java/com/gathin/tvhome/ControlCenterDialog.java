@@ -68,7 +68,7 @@ final class ControlCenterDialog extends Dialog {
         addCompact(pair,R.drawable.ic_bluetooth,R.string.control_bluetooth,()->launch(Settings.ACTION_BLUETOOTH_SETTINGS));
         addCompact(pair,R.drawable.ic_apps,R.string.control_apps,()->launch(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
         notificationPanel=new NotificationsPanel(activity,notifications);
-        LinearLayout.LayoutParams noticeParams=new LinearLayout.LayoutParams(-1,-2);panel.addView(notificationPanel,noticeParams);
+        LinearLayout.LayoutParams noticeParams=new LinearLayout.LayoutParams(-1,-2);noticeParams.topMargin=dp(8);panel.addView(notificationPanel,noticeParams);
         int[][] positions={{0,1},{2,3},{4,5},{6,7,8,9}};
         for(int r=0;r<positions.length;r++)for(int col=0;col<positions[r].length;col++){
             int[] here=positions[r];View v=controls.get(here[col]);

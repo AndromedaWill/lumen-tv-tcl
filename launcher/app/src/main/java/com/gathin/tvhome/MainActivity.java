@@ -89,6 +89,7 @@ import java.util.Set;
 public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
+    private static final int BACKGROUND_SETTINGS_REQUEST = 43;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
     static final String ACTION_INPUTS = "com.gathin.tvhome.action.INPUTS";
     static final String ACTION_NOTIFICATIONS="com.gathin.tvhome.action.NOTIFICATIONS";
@@ -107,6 +108,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private AppAdapter adapter;
     private HomeFocusStore focusStore;
     private boolean homeVisible;
+    private boolean personalMode, launchingApp;
     private RecyclerView grid;
     private FrameLayout root;
     private WallpaperPlayer wallpaperPlayer;
@@ -180,9 +182,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private float density;
     /** Module cards (res/values/config.xml, module_cards): discovered on resume, shown only after the owner's Show. */
     private boolean moduleCards;
-    /** config settings_key_keycodes / settings_key_panel, so the Settings button works on Home without HomeKeyService. */
+    /** Additional keycodes while Home itself receives input; no global hook or accessibility. */
     private int[] settingsKeycodes = new int[0];
-    private boolean settingsKeyPanel;
     /** Calmer motion for weak GPUs (config.xml, reduced_motion): stiff spring, short fades, no replay. */
     private boolean reducedMotion;
     /** config.xml dock_row: the first row is a separate dock (band, parked low, top shelf) rather than plain grid. */
@@ -229,6 +230,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private AppLibraryDialog appLibrary;
     private boolean libraryFocusPending;
     private RecyclerView.OnScrollListener pendingFocusScroll;
+    private RecyclerView.OnChildAttachStateChangeListener pendingFocusAttach;
+    private boolean focusingDuringScroll;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     /** Refreshes the network pill when the connection changes: at boot Wi-Fi often connects after Home is shown. */
@@ -302,7 +305,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
         Config cfg = Config.load(this);
         settingsKeycodes = cfg.settingsKeycodes;
-        settingsKeyPanel = cfg.settingsKeyPanel;
         COLUMNS = cfg.columns;
         animations = cfg.animations;
         advancedEffects = cfg.animations && cfg.advancedEffects;
@@ -317,10 +319,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sourcePanelAction = cfg.sourcePanelAction;
 
         root = findViewById(R.id.root);
-        boolean personalMode=!PersonalBackground.legacy(this);
+        personalMode=!PersonalBackground.legacy(this);
         boolean originalLandscape = cfg.wallpapers.isEmpty() || personalMode;
+        if(originalLandscape || (cfg.wallpaperEnabled&&!cfg.wallpapers.isEmpty()))BackdropStartupGate.arm(root);
         if (originalLandscape) {
-            root.setBackground(new HorizonDrawable());
+            root.setBackground(TvDesign.screen(this));
             if(!personalMode)ScenicBackdropDrawable.load(this, root);
         }
         else root.setBackgroundColor(cfg.backgroundColor);
@@ -406,6 +409,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public boolean requestChildRectangleOnScreen(@NonNull RecyclerView parent, @NonNull View child,
                                                          @NonNull Rect rect, boolean immediate,
                                                          boolean focusedChildVisible) {
+                if(focusingDuringScroll)return false;
                 if (dockRow && getPosition(child) < COLUMNS) return false;
                 int top = child.getTop() + rect.top;
                 int bottom = top + rect.height();
@@ -714,6 +718,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        launchingApp=false;
         homeVisible = true;
         if(topPresentation!=null)topPresentation.welcome();
         if(notificationsReturnPending){notificationsReturnPending=false;root.post(()->{if(homeVisible)showNotifications();});}
@@ -755,7 +760,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK) recreate();
+        if(resultCode==RESULT_OK && (requestCode==LAUNCHER_SETTINGS_REQUEST || requestCode==BACKGROUND_SETTINGS_REQUEST)){
+            boolean modeChanged=personalMode==PersonalBackground.legacy(this);
+            boolean rebuild=requestCode==LAUNCHER_SETTINGS_REQUEST && (data==null || data.getBooleanExtra(LauncherSettingsActivity.RECREATE_EXTRA,true));
+            if(rebuild||modeChanged)recreate();
+            // PersonalBackground.start() revalidates the selected image/video on resume.
+            // Do not rebuild the grid and replay its initial positioning for a wallpaper change.
+        }
     }
 
     /** Rebuilds the tiles (and the module cards), then puts focus back where it was. */
@@ -841,10 +852,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         homeVisible = false;
+        BackdropStartupGate.ready(root);
         if(calendarPanel!=null)calendarPanel.dismiss();
         if(topPresentation!=null)topPresentation.stop();
         if (adapter != null) adapter.visibleLayers(grid, false);
-        ScenicBackdropDrawable.stop(root);
+        ScenicBackdropDrawable.freeze(root);
         if (controlCenter != null) controlCenter.dismiss();
         focusStore.save(lastFocusedKey, lastFocused);
         endReorder();   // Home or another app while reordering keeps the order so far
@@ -868,6 +880,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onStop() {
         super.onStop();
+        ScenicBackdropDrawable.stop(root);
+        if(personalBackground!=null)personalBackground.hidden();
+        if(aerial!=null)aerial.hidden();
         unregisterReceiver(packageReceiver);
         checkPackagesOnResume = true;
     }
@@ -906,16 +921,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * nothing even on Home.
      */
     private boolean handleSettingsKey(KeyEvent event) {
-        for (int code : settingsKeycodes) {
-            if (event.getKeyCode() != code) continue;
-            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
-                navSound.onAppOpened();   // the same pop as the Settings button
-                open(settingsKeyPanel ? new Intent(this, QuickSettingsActivity.class)
-                        : systemIntent(Settings.ACTION_SETTINGS));
-            }
-            return true;
+        if(!RemoteKeys.isControlCenterKey(event.getKeyCode(),settingsKeycodes))return false;
+        if(event.getAction()==KeyEvent.ACTION_UP && !event.isCanceled()){
+            navSound.onAppOpened();showSettingsMenu();
         }
-        return false;
+        return true;
     }
 
     // ---- reorder ---------------------------------------------------------------------------------
@@ -1206,7 +1216,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** The dock band's top edge once it is parked at the top of the screen, from the grid's top. */
     private static final float DOCK_PARK_TOP_DP = 38f;
     /** The dock's slide to the top (and back down, onTileFocused) is longer than a row scroll: it travels further. */
-    private static final int PARK_MS = 480;
+    private static final int PARK_MS = 280;
 
     /**
      * How far to scroll the grid so the dock band's top sits DOCK_PARK_TOP_DP below the grid's top;
@@ -1340,6 +1350,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void positionFocusedTile(int position,View card,float pad,float topInRoot){
+        if(focusingDuringScroll)return;
         View item = (View) card.getParent();
         if (dockRow && position < COLUMNS) {
             // Dock: park it at the bottom of the screen.
@@ -1906,7 +1917,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     @Override public void beforeAppLaunch(Runnable launch) {
-        Runnable guarded=()->{if(homeVisible&&!isFinishing()&&!isDestroyed())launch.run();};
+        if(launchingApp||!homeVisible)return;
+        launchingApp=true;
+        Runnable guarded=()->{try{if(homeVisible&&!isFinishing()&&!isDestroyed())launch.run();}
+            finally{if(!returnFromApp)launchingApp=false;}};
         if(aerial!=null)aerial.beforeAppLaunch(guarded);
         else if(personalBackground!=null)personalBackground.beforeAppLaunch(guarded);
         else guarded.run();
@@ -1967,6 +1981,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void cancelPendingFocusScroll() {
+        if(pendingFocusAttach!=null){grid.removeOnChildAttachStateChangeListener(pendingFocusAttach);pendingFocusAttach=null;}
         if (pendingFocusScroll != null) {
             grid.removeOnScrollListener(pendingFocusScroll);
             pendingFocusScroll = null;
@@ -2007,12 +2022,27 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 rv.removeOnScrollListener(this);
                 if (pendingFocusScroll != this) return;
                 pendingFocusScroll = null;
+                if(pendingFocusAttach!=null){rv.removeOnChildAttachStateChangeListener(pendingFocusAttach);pendingFocusAttach=null;}
                 RecyclerView.ViewHolder h = rv.findViewHolderForAdapterPosition(pos);
                 View target = h != null ? h.itemView.findViewById(R.id.card) : rv.getChildAt(0);
                 if (target != null) target.requestFocus();
             }
         };
         grid.addOnScrollListener(pendingFocusScroll);
+        final RecyclerView.OnScrollListener scrollTicket=pendingFocusScroll;
+        pendingFocusAttach=new RecyclerView.OnChildAttachStateChangeListener(){
+            @Override public void onChildViewAttachedToWindow(@NonNull View child){
+                if(grid.getChildAdapterPosition(child)!=pos)return;
+                grid.post(()->{
+                    if(pendingFocusScroll!=scrollTicket||!homeVisible)return;
+                    View card=child.findViewById(R.id.card);if(card==null)return;
+                    focusingDuringScroll=true;
+                    try{card.requestFocus();}finally{focusingDuringScroll=false;}
+                });
+            }
+            @Override public void onChildViewDetachedFromWindow(@NonNull View child){}
+        };
+        grid.addOnChildAttachStateChangeListener(pendingFocusAttach);
         int park=dockRow && lastFocused<COLUMNS && pos>=COLUMNS ? parkDockBy(grid) : Integer.MIN_VALUE;
         if(park!=Integer.MIN_VALUE && park>0){
             ScenicBackdropDrawable.setLower(root,true,!reducedMotion);
@@ -2522,52 +2552,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * Background > Download aerials: Apple's whole set, each marked On TV or with its download progress. OK
      * downloads one (one at a time, carrying on if the menu closes); hold OK on one that is on the TV to remove it.
      */
-    private void showAerialStore() {
-        View anchor = findViewById(R.id.btnSettings);
-        View panel = getLayoutInflater().inflate(R.layout.popup_scroll, root, false);
-        LinearLayout rows = panel.findViewById(R.id.rows);
-        PopupWindow popup = glassPopup(panel, (int) (360 * density));
-        TextView loading = (TextView) storeRow(rows, getString(R.string.aerials_loading), null);
-        loading.setFocusable(true);
-        dropIn(popup, panel, anchor, Gravity.END);
-        loading.requestFocus();
-        AerialDownloads.loadCatalog(this, list -> {
-            if (!popup.isShowing()) return;
-            rows.removeAllViews();
-            if (list == null) {
-                storeRow(rows, getString(R.string.aerials_offline), null).requestFocus();
-                return;
-            }
-            for (AerialDownloads.Aerial a : list) {
-                View row = storeRow(rows, a.title, a);
-                TextView status = row.findViewById(R.id.status);
-                showStoreStatus(status, a);
-                row.setOnClickListener(v -> {
-                    if (AerialDownloads.onTv(this, a)) return;
-                    AerialDownloads.download(this, a, (pct, msg) -> {
-                        if (pct < 0) {
-                            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
-                        } else if (pct > 100) {
-                            Toast.makeText(this, getString(R.string.aerials_done, a.title), Toast.LENGTH_SHORT).show();
-                        }
-                        showStoreStatus(status, a);
-                        if (pct >= 0 && pct <= 100) status.setText(getString(R.string.aerials_percent, pct));
-                    });
-                    showStoreStatus(status, a);
-                });
-                row.setOnLongClickListener(v -> {
-                    if (!AerialDownloads.onTv(this, a)) return false;
-                    AerialDownloads.remove(this, a);
-                    showStoreStatus(status, a);
-                    Toast.makeText(this, getString(R.string.aerials_removed, a.title), Toast.LENGTH_SHORT).show();
-                    return true;
-                });
-            }
-            capScroll(panel);
-            popup.update(popup.getWidth(), ViewGroup.LayoutParams.WRAP_CONTENT);
-            if (rows.getChildCount() > 0) rows.getChildAt(0).requestFocus();
-        });
-    }
+    private void showAerialStore() { new AerialStoreDialog(this,null).show(); }
 
     /** A popup_scroll menu no taller than the space between the top icons and the dock; it scrolls past that. */
     private void capScroll(View panel) {
@@ -2579,24 +2564,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ViewGroup.LayoutParams lp = scroll.getLayoutParams();
         lp.height = max;
         scroll.setLayoutParams(lp);
-    }
-
-    private View storeRow(LinearLayout rows, String title, AerialDownloads.Aerial a) {
-        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
-        row.findViewById(R.id.icon).setVisibility(View.GONE);
-        row.findViewById(R.id.dot).setVisibility(View.GONE);
-        ((TextView) row.findViewById(R.id.title)).setText(title);
-        row.findViewById(R.id.status).setVisibility(a == null ? View.GONE : View.VISIBLE);
-        rows.addView(row);
-        return a == null ? row.findViewById(R.id.title) : row;
-    }
-
-    private void showStoreStatus(TextView status, AerialDownloads.Aerial a) {
-        if (a.file.equals(AerialDownloads.downloading)) {
-            status.setText(getString(R.string.aerials_percent, AerialDownloads.downloadPercent));
-        } else {
-            status.setText(AerialDownloads.onTv(this, a) ? R.string.aerials_on_tv : R.string.aerials_get);
-        }
     }
 
     /** The Android TV settings, with the same pop as opening an app. */
@@ -2654,7 +2621,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * and rebuilds Home, which starts the new flight.
      */
     private void showBackgroundMenu() {
-        startActivityForResult(new Intent(this,BackgroundSettingsActivity.class),LAUNCHER_SETTINGS_REQUEST);
+        startActivityForResult(new Intent(this,BackgroundSettingsActivity.class),BACKGROUND_SETTINGS_REQUEST);
     }
     private void showAerialMenu() {
         java.util.List<String[]> aerials = AerialBackdrop.catalog(this);

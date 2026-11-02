@@ -143,6 +143,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
 
     private AerialBackdrop(Context context, FrameLayout root, int index, File file, int coverColor, boolean cycle) {
         this.root=root;
+        root.setTag(R.id.background_video_visible,Boolean.TRUE);
         this.file = file;
         this.context = context.getApplicationContext();
         this.cycle = cycle;
@@ -156,11 +157,18 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         root.addView(video, index, full);
         layers.add(video);
 
+        // The still and live surface share the same shades, avoiding a brightness jump on pause.
+        cover = new VideoStillCover(context,root,video);
+        cover.poster(file,prefs.getInt(POSITION,0));
+        cover.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        root.addView(cover, index + 1, full);
+        layers.add(cover);
+
         // Top: a light shade under the clock and pills. Bottom: deeper, under the dock and the grid.
         View top = new View(context);
         top.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{0x8C000000, 0x26000000, 0x00000000}));
-        root.addView(top, index + 1, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+        root.addView(top, index + 2, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 (int) (context.getResources().getDisplayMetrics().heightPixels * 0.42f)));
         layers.add(top);
         View bottom = new View(context);
@@ -169,7 +177,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 (int) (context.getResources().getDisplayMetrics().heightPixels * 0.62f));
         lp.gravity = android.view.Gravity.BOTTOM;
-        root.addView(bottom, index + 2, lp);
+        root.addView(bottom, index + 3, lp);
         layers.add(bottom);
         for (View v : new View[]{top, bottom}) {
             v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -180,27 +188,27 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         gridDim.setBackgroundColor(0x9E05070C);
         gridDim.setAlpha(0f);
         gridDim.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        root.addView(gridDim, index + 3, full);
+        root.addView(gridDim, index + 4, full);
         layers.add(gridDim);
 
-        cover = new VideoStillCover(context,root,video);
-        cover.poster(file,prefs.getInt(POSITION,0));
-        cover.setWillNotDraw(false);
-        cover.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        root.addView(cover, index + 4, full);
-        layers.add(cover);
     }
 
     /** Focus in the grid below the dock: dim the aerial so the icons own the screen, as tvOS does. */
     void setGridFocused(boolean inGrid) {
+        setGridFocused(inGrid,true);
+    }
+    void setGridFocused(boolean inGrid,boolean animate) {
         if (inGrid == dimmed) return;
         dimmed = inGrid;
         gridDim.animate().cancel();
-        gridDim.animate().alpha(inGrid ? 1f : 0f).setDuration(inGrid ? 380 : 300).start();
+        if(animate)gridDim.animate().alpha(inGrid ? 1f : 0f).setDuration(inGrid ? 380 : 300).start();
+        else gridDim.setAlpha(inGrid?1f:0f);
     }
 
     void resume() {
+        if(resumed)return;
         resumed = true;
+        cover.showStill();
         root.setTag(R.id.background_video_visible,Boolean.TRUE);
         video.setVisibility(View.VISIBLE);
         start();
@@ -209,9 +217,12 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     void pause() {
         resumed = false;
         cover.showStill();
-        video.setVisibility(View.INVISIBLE);
         release();
     }
+    /** Decoder is already released in pause; retire the surface once the window is hidden. */
+    void hidden(){if(!resumed)video.setVisibility(View.INVISIBLE);}
+    boolean hasStill(){return cover.hasStill();}
+    void whenReady(Runnable action){cover.whenReady(action);}
     void beforeAppLaunch(Runnable launch){if(resumed&&player!=null)cover.beforeAppLaunch(launch);else launch.run();}
     void close(){pause();root.setTag(R.id.background_video_visible,Boolean.FALSE);cover.close();for(View v:layers)if(v.getParent() instanceof ViewGroup)((ViewGroup)v.getParent()).removeView(v);layers.clear();}
 
@@ -238,8 +249,6 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
             mp.setOnInfoListener((p, what, extra) -> {
                 if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START && player == p) {
                     cover.begin();
-                    // Surface already has content: don't crossfade an old still over moving video.
-                    cover.animate().cancel();cover.setAlpha(0f);
                 }
                 return false;
             });
