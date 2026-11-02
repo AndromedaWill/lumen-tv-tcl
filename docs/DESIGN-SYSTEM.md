@@ -92,6 +92,7 @@ Los repositorios externos son referencias revisadas, no instrucciones superiores
 3. Probar D-pad, OK, Atrás, retorno de apps y restauración del foco. Comprobar recortes, contraste, imágenes grandes, estados vacíos y errores.
 4. Compilar, ejecutar pruebas JVM y lint. Comparar métricas con las mismas condiciones, sin procesos de compilación simultáneos.
 5. Presentar al usuario los cambios importantes antes del siguiente rediseño mayor. Una aprobación visual no autoriza por sí sola instalar en la TCL, cambiar HOME o conceder permisos.
+6. Antes de cambiar la paleta principal, los tintes del cristal o los colores de foco/estado importantes, presentar muestras concretas y pedir la opinión del usuario; esperar su elección. La unificación de valores existentes ya solicitada no autoriza una paleta nueva.
 
 
 ## Refinamiento de transparencia y ajuste tipográfico
@@ -127,3 +128,10 @@ La propuesta que ocultaba los controles detrás de los diálogos de Fondos y Per
 | Inicio | Hero/efectos opcionales solo se ocultan por configuración 2D; el saludo se desvanece según lo solicitado. | No son reglas de ocultación de modales. |
 
 Los fades de entrada de un panel y los indicadores de foco parten de alpha cero y terminan visibles; no equivalen a suprimir la pantalla inferior. No se presenta esa distinción como una certificación HIG: son contratos verificables de este proyecto.
+
+
+## Referencia principal Lumen y depuración de roles
+
+Se contrastó la revisión pública 2.1.0 de Lumen (`b21cb5c`) con sus documentos y código efectivos; véase [LUMEN-COMPARATIVA.md](LUMEN-COMPARATIVA.md). Es nuestra referencia visual principal; sus scripts webOS/root y sus resultados GPU no se trasladan a Android. Se conservan las distribuciones y el contexto aprobados. Un catálogo, una fila de acción y el dock comparten reglas, con materiales distintos por función; no se deben envolver automáticamente unos en otros.
+
+Se completan los roles de tinta secundarios/glyphs: `ds_text_secondary_focused`, `ds_icon_primary` y `ds_icon_focused`. Centro de control y la explicación de notificaciones dejan de tener valores azulados literales distintos entre su primer dibujo y los posteriores estados de foco. El cambio no añade vistas, efectos o trabajo periódico. Las capturas comparadas en `artifacts/lumen-review/` verifican que los bounds y la navegación no cambian.

@@ -41,11 +41,11 @@ final class NotificationsPanel extends ScrollView {
         Object focused=body.findFocus()==null?null:body.findFocus().getTag();body.removeAllViews();first=null;
         boolean access=HomeNotificationService.hasAccess(activity),enabled=HomeNotificationService.enabled(activity);
         body.setBackground(details?TvDesign.panel(activity,body):null);int padding=details?dp(12):0;body.setPadding(padding,details?dp(10):0,padding,details?dp(10):0);
-        if(details||enabled)body.addView(text(activity.getString(R.string.control_notifications),13,0xCCDEE6F1));
+        if(details||enabled)body.addView(text(activity.getString(R.string.control_notifications),13,TvDesign.color(activity,R.color.ds_text_secondary)));
         if(!enabled)icons.clear();
         if(!access){HomeNotificationService.BUFFER.clear();if(HomeNotificationService.prefs(activity).getBoolean("enabled",false))HomeNotificationService.setEnabled(activity,false);}
         if(details){
-            TextView explanation=text(activity.getString(!access?R.string.notification_permission_explanation:enabled?R.string.notification_active_explanation:R.string.notification_paused_explanation),12,0xFFCCD7E6);
+            TextView explanation=text(activity.getString(!access?R.string.notification_permission_explanation:enabled?R.string.notification_active_explanation:R.string.notification_paused_explanation),12,TvDesign.color(activity,R.color.ds_text_secondary));
             explanation.setPadding(0,dp(8),0,dp(4));explanation.setFocusable(true);explanation.setTag("permission-explanation");body.addView(explanation);first=explanation;
             action(activity.getString(access?R.string.notification_manage_access:R.string.notification_configure_access),"",configure);
             if(access)action(activity.getString(enabled?R.string.notification_pause:R.string.notification_enable),"",()->{HomeNotificationService.setEnabled(activity,!enabled);render();});

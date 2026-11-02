@@ -76,3 +76,8 @@ Pendientes: proveedor de archivos de TCL y mando dentro de ese proveedor (el del
 Durante la prueba local prolongada el proceso del AVD se cerró al pasar a 720p; el log del renderizador contenía errores de color buffer. Se reinició el mismo AVD, sin borrar sus datos, para repetir la validación pendiente. No se atribuye ese cierre al launcher ni se usa como evidencia de estabilidad de la TCL. La incidencia está en `modals-final.log`; la repetición completada en `modal-context.log` y `emulator-recovery*.log`.
 
 La comprobación de contexto mide los píxeles del título de la pantalla base antes/durante el modal: conserva una luminancia relativa de 0.351 a 720p y 1080p, compatible con el dim del 65%, en vez de desaparecer. `modal-context/context-visibility.json` guarda el cálculo y las capturas originales.
+
+
+### Continuación tras el estudio específico de Lumen
+
+Se conserva D5F7 como checkpoint. La revisión posterior 10DB36445CFF solo unifica tintas secundarias/glyphs con los neutros existentes: [LUMEN-COMPARATIVA.md](LUMEN-COMPARATIVA.md) documenta fuentes, cambios, pruebas y su APK conservado. El estudio no añadió nuevas funciones ni efectos. La regla de consulta previa sobre colores importantes está en DESIGN-SYSTEM.md y AGENTS.md.

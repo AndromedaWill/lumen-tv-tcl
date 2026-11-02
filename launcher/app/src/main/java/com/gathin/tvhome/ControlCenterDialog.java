@@ -68,7 +68,7 @@ final class ControlCenterDialog extends Dialog {
         pair=pair(row);
         addCompact(pair,R.drawable.ic_bluetooth,R.string.control_bluetooth,()->launch(Settings.ACTION_BLUETOOTH_SETTINGS));
         addCompact(pair,R.drawable.ic_apps,R.string.control_apps,()->launch(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-        compactLabel=text(R.string.control_sound,12,0xFFDBE5F2);compactLabel.setGravity(Gravity.CENTER);compactLabel.setAlpha(0);
+        compactLabel=text(R.string.control_sound,12,TvDesign.color(activity,R.color.ds_text_secondary));compactLabel.setGravity(Gravity.CENTER);compactLabel.setAlpha(0);
         panel.addView(compactLabel,new LinearLayout.LayoutParams(-1,dp(12)));
         notificationPanel=new NotificationsPanel(activity,notifications);
         LinearLayout.LayoutParams noticeParams=new LinearLayout.LayoutParams(-1,-2);panel.addView(notificationPanel,noticeParams);
@@ -147,7 +147,7 @@ final class ControlCenterDialog extends Dialog {
         row.addView(tile, lp);
         ImageView glyph = new ImageView(activity);
         glyph.setImageResource(icon);
-        glyph.setColorFilter(0xFFF2F4FB);
+        glyph.setColorFilter(TvDesign.color(activity,R.color.ds_icon_primary));
         LinearLayout.LayoutParams glyphParams = new LinearLayout.LayoutParams(dp(21), dp(21));
         glyphParams.rightMargin = dp(8);
         tile.addView(glyph, glyphParams);
@@ -173,8 +173,8 @@ final class ControlCenterDialog extends Dialog {
             name.setSelected(focused&&motion);
             sub.setSelected(focused&&motion);
             name.setTextColor(TvDesign.color(activity,focused?R.color.ds_text_focused:R.color.ds_text_primary));
-            sub.setTextColor(focused ? 0xFF505050 : TvDesign.color(activity,R.color.ds_text_secondary));
-            glyph.setColorFilter(focused ? 0xFF303030 : 0xFFF5F5F5);
+            sub.setTextColor(TvDesign.color(activity,focused?R.color.ds_text_secondary_focused:R.color.ds_text_secondary));
+            glyph.setColorFilter(TvDesign.color(activity,focused?R.color.ds_icon_focused:R.color.ds_icon_primary));
             v.animate().cancel();
             if (motion) v.animate().scaleX(focused ? 1.035f : 1).scaleY(focused ? 1.035f : 1).setDuration(TvDesign.focusDuration(activity)).start();
         });
@@ -199,11 +199,11 @@ final class ControlCenterDialog extends Dialog {
         LinearLayout.LayoutParams position=new LinearLayout.LayoutParams(0,-1,1);
         if(!left)position.leftMargin=dp(6);
         row.addView(tile,position);
-        ImageView glyph=new ImageView(activity);glyph.setImageResource(icon);glyph.setColorFilter(0xFFF2F4FB);
+        ImageView glyph=new ImageView(activity);glyph.setImageResource(icon);glyph.setColorFilter(TvDesign.color(activity,R.color.ds_icon_primary));
         tile.addView(glyph,new android.widget.FrameLayout.LayoutParams(dp(23),dp(23),Gravity.CENTER));
         tile.setOnFocusChangeListener((v,focused)->{
             tile.setBackground(new FrostedControlDrawable(activity,tile,focused,radii));
-            glyph.setColorFilter(focused?0xFF303030:0xFFF5F5F5);
+            glyph.setColorFilter(TvDesign.color(activity,focused?R.color.ds_icon_focused:R.color.ds_icon_primary));
             if(compactLabel!=null){compactLabel.setText(title);compactLabel.setAlpha(focused?1:0);}
             v.animate().cancel();
             if(motion)v.animate().scaleX(focused?1.025f:1).scaleY(focused?1.025f:1).setDuration(TvDesign.focusDuration(activity)).start();
