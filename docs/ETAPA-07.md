@@ -1,6 +1,6 @@
 # Etapa 07 · Ajustes funcionales y rendimiento caracterizado
 
-Fecha: 1 de noviembre de 2026 (America/Lima). Candidato de desarrollo para aprobación visual. La TCL real no recibió comandos ni instalación en esta etapa; Google TV sigue siendo la referencia de Inicio de la prueba física anterior.
+Fecha: 1 de noviembre de 2026 (America/Lima). Candidato de desarrollo para aprobación visual. Las medidas de desarrollo son de emulador. Posteriormente el usuario autorizó la actualización y apertura en la TCL; se completaron como app normal, conservando Google TV como Inicio. Véase el registro físico al final.
 
 ## Qué se implementó
 
@@ -77,10 +77,12 @@ Se entrega para aprobar estas pantallas. **No se añadieron alias HDMI, reciente
 La caracterización de jank sigue abierta como P1 para una medición física autorizada. Antes de recomendar una actualización estable: repetir dock/catálogo, retorno y vídeo real en la TCL, confirmar nitidez/mando/proveedor de archivos y medir memoria/frames con condiciones controladas. La sustitución HOME, accesibilidad, limpieza, entradas y volumen global no se combinan con esta prueba. El launcher original y servicios nativos se conservan.
 
 
-## Próxima prueba física · pendiente de autorización
+## Prueba física · actualización autorizada completada
 
-El usuario confirmó como conexión actual `192.168.0.107:37935`. No se ha contactado ese endpoint durante esta entrega. El checkpoint funcional es `90fc731`; el APK firmado es el 39264 indicado arriba. Se solicitarán por separado conexión, consulta de nuestro paquete, comprobación de HOME antes/después, actualización y apertura. No se autoriza HOME ni acceso a servicios por instalar.
+El usuario confirmó `192.168.0.107:37935` y autorizó específicamente conexión, consulta del paquete, resolución de HOME antes/después, actualización y apertura. El checkpoint funcional es `90fc731`; se instaló exactamente el APK 39264 indicado arriba, tras verificar de nuevo su SHA local. Conexión correcta, paquete propio presente, instalación `Success` y apertura `Status: ok / COLD`. La resolución de HOME anterior y posterior devolvió `com.google.android.apps.tv.launcherx/.home.HomeActivity`. No se cambió HOME ni se concedió acceso a servicios. Registro: `artifacts/stage-07/physical/update.json`.
 
-La actualización controlada usa `adb -s 192.168.0.107:37935 install -r --user 0 "C:\Users\milmil\Documents\ChatGPT\Apple tv en andriod tv\artifacts\stage-07\candidate-39264c9ee740.apk"`. Solo proceder si las consultas confirman nuestra app y Google TV como HOME. Abrir después con `adb -s 192.168.0.107:37935 shell am start -W -n pe.tclhome.prototype/com.gathin.tvhome.MainActivity`. Para salir, el usuario pulsa Home y vuelve al Inicio vigente; Atrás cierra los paneles por nivel. La verificación posterior de HOME no lo modifica.
+La actualización controlada usa `adb -s 192.168.0.107:37935 install -r --user 0 "C:\Users\milmil\Documents\ChatGPT\Apple tv en andriod tv\artifacts\stage-07\candidate-39264c9ee740.apk"`. Las consultas previas confirmaron nuestra app y Google TV como HOME. Se abrió después con `adb -s 192.168.0.107:37935 shell am start -W -n pe.tclhome.prototype/com.gathin.tvhome.MainActivity`. Para salir, el usuario pulsa Home y vuelve al Inicio vigente; Atrás cierra los paneles por nivel. La verificación posterior de HOME no lo modifica.
 
 Si hay un problema, Home permite continuar usando Google TV. El APK EC8011 previo sigue conservado; cualquier reinstalación/desinstalación o restauración requiere otra autorización específica. Desinstalar nuestra app borraría sus preferencias e imágenes importadas; no se ejecuta como parte de esta actualización. Convertir nuestra app en Inicio principal será una prueba posterior mediante el selector oficial, después de aceptación visual y un procedimiento de vuelta verificado.
+
+Android informó `TotalTime=1450ms` y `WaitTime=1476ms` en `am start -W`; esto mide el lanzamiento por ADB, no la latencia del mando, ni demuestra por sí solo nitidez o fluidez. No hay todavía PSS, percentiles físicos ni captura de esta revisión: las tres lecturas se solicitaron por separado y no se reutilizan autorizaciones anteriores. Queda pendiente el informe del usuario sobre dock, Ajustes y vídeo. No se cambió entrada HDMI, audio, escalas, paquetes ni servicios.

@@ -208,3 +208,12 @@ PSS observado: **84,082 KiB (82.11 MiB)**; SwapPSS 11,105 KiB. La sesión acumul
 P1: eliminar cambio a foto ajena/fundido al abrir apps con vídeo; reducir el salto al bajar al catálogo; mantener liberación del decodificador. P2: uniformar arte de aplicaciones, subir etiquetas superiores, compactar Centro de control y colocar avisos debajo. La revisión local 06 aborda estos puntos y el sistema visual se recoge en [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md). El nuevo APK todavía no está instalado en la TCL; allí sigue EC8011.
 
 Las autorizaciones de estas lecturas ya se utilizaron. Una nueva captura, lectura, actualización, apertura o prueba automatizada en la TCL requiere autorización específica. No se han tocado HOME, permisos de notificaciones, accesibilidad, HDMI o políticas de audio. El consumo con NotificationListenerService autorizado continúa sin medir y no se recomienda activarlo todavía.
+
+
+## Actualización autorizada 39264 · Ajustes jerárquicos
+
+Se actualizó nuestra app en `192.168.0.107:37935` tras cinco autorizaciones específicas: conexión, presencia del paquete, HOME antes/después, instalación y apertura. El APK conservado `artifacts/stage-07/candidate-39264c9ee740.apk` se verificó localmente por SHA antes de ejecutar `install -r --user 0`. Resultado `Success`; apertura normal `Status: ok / COLD`, TotalTime 1450ms y WaitTime 1476ms. No es una comparación controlada con EC8011 ni una medida de respuesta del mando.
+
+Google TV (`com.google.android.apps.tv.launcherx/.home.HomeActivity`) sigue siendo HOME, confirmado antes y después. Se conservan preferencias y servicios. Ninguna activación de accesibilidad/notificaciones, cambio de entradas o limpieza forma parte de esta actualización. [Cambios y pruebas del candidato](ETAPA-07.md), [caracterización del jank](JANK-07.md). Registro de la operación: `artifacts/stage-07/physical/update.json`.
+
+Las afirmaciones anteriores de «EC8011 sigue instalado» describen ese checkpoint histórico; ahora está instalado 39264. Las métricas de EC8011/B859 no se atribuyen al nuevo APK. La revisión visual del usuario, frames, memoria y captura de 39264 están pendientes; las lecturas se han solicitado de nuevo. No convertir todavía el candidato en HOME principal sin una aceptación independiente y la reversión preparada.
