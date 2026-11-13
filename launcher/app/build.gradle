@@ -45,7 +45,6 @@ android {
         }
     }
 
-    sourceSets { main { assets.srcDir(rootProject.file("../.dev/personal-assets")) } }
 
     packagingOptions {
         resources {

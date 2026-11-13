@@ -142,4 +142,6 @@
     <!-- Cinematic top shelf (cinematic_home): the line under the focused dock app's name; %1$s is when it was
          last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
     <string name="last_opened">Last opened %1$s</string>
+    <string name="tcl_remote_shortcuts_name">TCL remote shortcuts</string>
+    <string name="tcl_remote_shortcuts_description">Handles Settings and the verified app buttons while other apps are open. Uses key filtering and does not read screen content.</string>
 </resources>

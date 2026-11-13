@@ -37,6 +37,15 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     private SurfaceHolder surface;
     private boolean resumed;
     private boolean dimmed;
+    private boolean pausedForGrid;
+    private final Runnable pauseGridPlayback = this::pauseVideoInGrid;
+
+    private void pauseVideoInGrid() {
+        if (resumed && dimmed && player != null && player.isPlaying()) {
+            player.pause();
+            pausedForGrid = true;
+        }
+    }
 
     private static final String PREFS = "aerial_backdrop", CHOSEN = "file", POSITION = "position";
 
@@ -186,8 +195,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
             v.forceHasOverlappingRendering(false);
         }
 
-        gridDim = new GridBackdropView(context);
-        gridDim.setBackgroundColor(0x9E05070C);
+        gridDim = new GridBackdropView(context, 0x9E05070C);
         gridDim.setWillNotDraw(false);
         gridDim.setAlpha(0f);
         gridDim.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -203,11 +211,14 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     void setGridFocused(boolean inGrid,boolean animate) {
         if (inGrid == dimmed) return;
         dimmed = inGrid;
-        if(inGrid){
-            gridDim.blur(cover.snapshot());
-            if(resumed&&player!=null)cover.refreshSnapshot(()->{if(dimmed&&resumed)gridDim.blur(cover.snapshot());});
+        gridDim.focused(inGrid, animate);
+        gridDim.removeCallbacks(pauseGridPlayback);
+        if (inGrid) {
+            gridDim.postDelayed(pauseGridPlayback, animate ? 280 : 0);
+        } else if (pausedForGrid && player != null) {
+            pausedForGrid = false;
+            player.start();
         }
-        gridDim.focused(inGrid,animate);
     }
 
     void resume() {
@@ -228,7 +239,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     void hidden(){if(!resumed)video.setVisibility(View.INVISIBLE);}
     boolean hasStill(){return cover.hasStill();}
     void whenReady(Runnable action){cover.whenReady(action);}
-    void beforeAppLaunch(Runnable launch){if(resumed&&player!=null)cover.beforeAppLaunch(launch);else launch.run();}
+    void beforeAppLaunch(Runnable launch){if(resumed&&player!=null&&!pausedForGrid)cover.beforeAppLaunch(launch);else launch.run();}
     void close(){pause();gridDim.close();root.setTag(R.id.background_video_visible,Boolean.FALSE);if(root.getTag(R.id.video_still_owner)==cover)root.setTag(R.id.video_still_owner,null);cover.close();for(View v:layers)if(v.getParent() instanceof ViewGroup)((ViewGroup)v.getParent()).removeView(v);layers.clear();}
 
     private void start() {
@@ -254,7 +265,14 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
             mp.setOnInfoListener((p, what, extra) -> {
                 if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START && player == p) {
                     cover.begin();
-                    if(dimmed)cover.refreshSnapshot(()->{if(dimmed&&resumed)gridDim.blur(cover.snapshot());});
+                    // Prepare one reusable veil while playback starts, away from D-pad input.
+                    cover.refreshSnapshot(() -> {
+                        if (resumed && player == p) gridDim.blur(cover.snapshot());
+                    });
+                    if (dimmed) {
+                        gridDim.removeCallbacks(pauseGridPlayback);
+                        gridDim.postDelayed(pauseGridPlayback, 280);
+                    }
                 }
                 return false;
             });
@@ -272,11 +290,14 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     }
 
     private void release() {
+        gridDim.removeCallbacks(pauseGridPlayback);
         MediaPlayer mp = player;
+        boolean wasPausedForGrid = pausedForGrid;
+        pausedForGrid = false;
         player = null;
         if (mp == null) return;
         try {
-            if (mp.isPlaying()) prefs.edit().putInt("position", mp.getCurrentPosition()).apply();
+            if (wasPausedForGrid || mp.isPlaying()) prefs.edit().putInt("position", mp.getCurrentPosition()).apply();
         } catch (IllegalStateException ignored) {
             // still preparing: keep the previous position
         }

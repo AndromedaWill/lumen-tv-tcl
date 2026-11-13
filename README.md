@@ -1,3 +1,9 @@
+# Lumen TV — fork para TCL C6K
+
+Código actual de nuestro launcher Android TV. Consulta [la guía del fork](docs/LUMEN-TV.md) para compilar, conocer el estado y continuar el desarrollo. El contenido de referencia original se conserva debajo.
+
+---
+
 > **Fork TCL Home en desarrollo:** empezar por [la entrega y sus límites](docs/ENTREGA-01.md),
 > [compilación Windows](docs/ENTORNO-WINDOWS.md) y [compatibilidad/restauración](docs/COMPATIBILIDAD-TCL.md).
 > Las instrucciones de instalación y debloat que siguen son documentación histórica del origen;

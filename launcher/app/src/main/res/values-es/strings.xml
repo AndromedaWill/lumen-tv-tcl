@@ -136,4 +136,6 @@
     <string name="race_live">%1$s · en directo</string>
     <string name="race_finished">Carrera terminada</string>
     <string name="last_opened">Última apertura: %1$s</string>
+    <string name="tcl_remote_shortcuts_name">Atajos del mando TCL</string>
+    <string name="tcl_remote_shortcuts_description">Abre el Centro de control y las apps asignadas desde otras aplicaciones. Usa filtrado de teclas y no lee el contenido de la pantalla.</string>
 </resources>

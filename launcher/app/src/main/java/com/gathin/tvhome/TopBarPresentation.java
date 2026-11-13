@@ -15,10 +15,17 @@ final class TopBarPresentation {
     private static long lastGreeting=-1;
     private final boolean motion;
     private final Runnable fade;
+    private int greetingGeneration;
+    private boolean gridVisible;
+    private long greetingUntil;
     TopBarPresentation(Activity activity,FrameLayout root,boolean motion){
         this.activity=activity;this.root=root;this.motion=motion;
         label=make(12);greeting=make(19);
-        fade=()->{if(motion)greeting.animate().alpha(0).setDuration(500).start();else greeting.setAlpha(0);};
+        fade=()->{
+            greetingUntil=0;
+            if(motion && !gridVisible) greeting.animate().alpha(0).setDuration(500).start();
+            else greeting.setAlpha(0);
+        };
     }
     private int dp(float n){return Math.round(n*activity.getResources().getDisplayMetrics().density);}
     private TextView make(int size){
@@ -38,21 +45,38 @@ final class TopBarPresentation {
     void welcome(){
         long now=android.os.SystemClock.elapsedRealtime();
         if((lastGreeting>=0 && now-lastGreeting<30*60_000L)||!activity.hasWindowFocus())return;
-        if(activity.findViewById(R.id.clockBlock)==null)return;
+        if(activity.findViewById(R.id.clockBlock)==null || gridVisible)return;
         lastGreeting=now;
         String name=activity.getSharedPreferences("home_profile",0).getString("name","Will");
         int hour=LocalTime.now().getHour();int res=hour<5||hour>=19?R.string.good_night:hour<12?R.string.good_morning:R.string.good_afternoon;
         greeting.setEllipsize(android.text.TextUtils.TruncateAt.END);
         greeting.setMaxWidth(Math.max(dp(100),root.getWidth()-dp(500)));
         greeting.setText(name.isEmpty()?activity.getString(res):activity.getString(R.string.greeting_with_name,activity.getString(res),name));
+        int generation=++greetingGeneration;
         root.post(()->{
-            if(!activity.hasWindowFocus())return;
+            if(generation!=greetingGeneration || !activity.hasWindowFocus())return;
             View clock=activity.findViewById(R.id.clockBlock);int[] p=new int[2],o=new int[2];
             clock.getLocationInWindow(p);root.getLocationInWindow(o);
             greeting.setTranslationX(p[0]-o[0]+clock.getWidth()+dp(26));greeting.setTranslationY(p[1]-o[1]+dp(8));
-            greeting.setAlpha(1);root.postDelayed(fade,4200);
+            greetingUntil=android.os.SystemClock.uptimeMillis()+4200;
+            greeting.setAlpha(gridVisible?0:1);
+            root.postDelayed(fade,4200);
         });
     }
-    void stop(){root.removeCallbacks(fade);greeting.animate().cancel();greeting.setAlpha(0);label.setAlpha(0);}
+    void setGridVisible(boolean visible) {
+        if (gridVisible == visible) return;
+        gridVisible = visible;
+        greeting.animate().cancel();
+        boolean active = android.os.SystemClock.uptimeMillis() < greetingUntil;
+        greeting.setAlpha(!visible && active ? 1f : 0f);
+    }
+    private void dismissGreeting() {
+        greetingUntil=0;
+        greetingGeneration++;
+        root.removeCallbacks(fade);
+        greeting.animate().cancel();
+        greeting.setAlpha(0);
+    }
+    void stop(){dismissGreeting();label.setAlpha(0);}
     void hideLabel(){label.setAlpha(0);}
 }

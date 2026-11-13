@@ -10,8 +10,11 @@ final class GridBackdropView extends View {
     private final Paint paint=new Paint(Paint.FILTER_BITMAP_FLAG);
     private final Rect destination=new Rect();
     private int generation;
-    GridBackdropView(Context context){
-        super(context);setWillNotDraw(false);setAlpha(0);setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+    private final int fallbackColor;
+    GridBackdropView(Context context, int fallbackColor){
+        super(context);
+        this.fallbackColor = fallbackColor;
+        setWillNotDraw(false);setAlpha(0);setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         forceHasOverlappingRendering(false);
     }
     void image(Bitmap bitmap){generation++;image=bitmap;invalidate();}
@@ -25,7 +28,8 @@ final class GridBackdropView extends View {
                 result=Bitmap.createBitmap(160,90,Bitmap.Config.ARGB_8888);
                 new Canvas(result).drawBitmap(source,null,new Rect(0,0,160,90),new Paint(Paint.FILTER_BITMAP_FLAG));
                 ScenicBackdropDrawable.blur(result);
-                new Canvas(result).drawColor(0x42000000);result.prepareToDraw();
+                new Canvas(result).drawColor(0x42000000);result.setHasAlpha(false);
+                result.prepareToDraw();
             }catch(RuntimeException|OutOfMemoryError failure){if(result!=null)result.recycle();return;}
             Bitmap ready=result;
             post(()->{if(ticket!=generation){ready.recycle();return;}image=ready;invalidate();});
@@ -38,7 +42,10 @@ final class GridBackdropView extends View {
     void freeze(){generation++;animate().cancel();}
     void close(){freeze();image=null;}
     @Override protected void onDraw(Canvas canvas){
-        if(image==null)return;
+        if (image == null) {
+            canvas.drawColor(fallbackColor);
+            return;
+        }
         destination.set(0,0,getWidth(),getHeight());canvas.drawBitmap(image,null,destination,paint);
     }
 }

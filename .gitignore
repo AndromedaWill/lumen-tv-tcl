@@ -20,3 +20,10 @@ tools/fixtures/.gradle/
 tools/fixtures/app/build/
 tools/fixtures/build/
 tools/fixtures/local.properties
+
+# Local credentials and signing keys
+*.jks
+*.keystore
+keystore.properties
+.env
+.env.*

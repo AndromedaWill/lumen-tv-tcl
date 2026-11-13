@@ -60,6 +60,23 @@ final class RemoteKeys {
         return keys;
     }
 
+    static boolean isVerifiedTclRemote(KeyEvent event) {
+        android.view.InputDevice remote = event.getDevice();
+        return "G08".equals(android.os.Build.DEVICE)
+                && remote != null && "BT_RC813A_B1".equals(remote.getName());
+    }
+
+    /** Physical RC813A codes verified on G08/AU02. Global keys can still be routed by Android. */
+    static String foregroundTclShortcut(KeyEvent event) {
+        if (!isVerifiedTclRemote(event)) return null;
+        switch (event.getKeyCode()) {
+            case 190: return "com.google.android.youtube.tv";
+            case 4062: return "com.netflix.ninja";
+            case 4099: return "com.amazon.amazonvideo.livingroom";
+            default: return null;
+        }
+    }
+
     /** Opens an app from a remote button: its TV entry if it has one, else its phone entry. */
     static void launch(Context ctx, String pkg) {
         Intent open = ctx.getPackageManager().getLeanbackLaunchIntentForPackage(pkg);

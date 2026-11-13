@@ -99,15 +99,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean rtlAppGrid;
     private static final long MINUTE_MS = 60_000L;
     private static final long STATS_MS = 10_000L;
-    private String liveTvPkg;
-    private String liveTvAction;
-    private String inputAction;
-    private String sourcePanelService;
-    private String sourcePanelAction;
 
     private AppAdapter adapter;
     private HomeFocusStore focusStore;
+    private InputMenu inputMenu;
     private boolean homeVisible;
+    private boolean homeStarted;
+    private boolean dockFocusPending;
     private boolean personalMode, launchingApp;
     private RecyclerView grid;
     private FrameLayout root;
@@ -304,6 +302,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         density = getResources().getDisplayMetrics().density;
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
         Config cfg = Config.load(this);
+        inputMenu = new InputMenu(this, cfg);
         settingsKeycodes = cfg.settingsKeycodes;
         COLUMNS = cfg.columns;
         animations = cfg.animations;
@@ -312,11 +311,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         dockRow = cfg.dockRow;
         festival = cfg.festival;
         festive = festival.active(LocalDate.now());
-        liveTvPkg = cfg.liveTvPackage;
-        liveTvAction = cfg.liveTvAction;
-        inputAction = cfg.inputAction;
-        sourcePanelService = cfg.sourcePanelService;
-        sourcePanelAction = cfg.sourcePanelAction;
 
         root = findViewById(R.id.root);
         personalMode=!PersonalBackground.legacy(this);
@@ -648,7 +642,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         // Hide the glass when focus leaves the tiles.
         getWindow().getDecorView().getViewTreeObserver().addOnGlobalFocusChangeListener((oldF, newF) -> {
-            if (oldF != null && newF != null && oldF != newF) navSound.onFocusMoved();
             boolean onTile = newF != null && newF.getId() == R.id.card;
             if (!onTile) hideGlass();
         });
@@ -697,17 +690,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onNewIntent(intent);
         if (openLauncherSettingsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
-        // Home from an app restores its tile; a second Home while already here returns to the dock.
-        if (!homeVisible) return;
-        grid.scrollToPosition(0);
-        lastFocused = 0;
-        lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
-        rebuildOnResume = true;
+        // Android can deliver a new intent between pause and resume even for the foreground task.
+        // A stopped Home task instead restores its previous tile when returning from another app.
+        if (!homeStarted || returnFromApp) return;
+        if (homeVisible) focusTile(0);
+        else dockFocusPending = true;
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        homeStarted = true;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(packageReceiver, packageFilter, Context.RECEIVER_NOT_EXPORTED);
         } else {
@@ -734,7 +727,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             tilesReady = false;
             reloadApps(true);
         }
+        else if (dockFocusPending) focusTile(0);
         else if(returnFromApp)restoreFocus();
+        dockFocusPending = false;
         returnFromApp=false;
         rebuildOnResume = false;
         updateGreeting();
@@ -880,6 +875,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onStop() {
         super.onStop();
+        homeStarted = false;
+        dockFocusPending = false;
         ScenicBackdropDrawable.stop(root);
         if(personalBackground!=null)personalBackground.hidden();
         if(aerial!=null)aerial.hidden();
@@ -943,8 +940,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         TvFocusMotion.noteKey(event);   // which way the next focused icon should lean
-        if (event.getAction() == KeyEvent.ACTION_DOWN && TvFocusMotion.lastDirection == event.getKeyCode()) navSound.noteKey();
         if (handleSettingsKey(event)) return true;
+        String shortcut = RemoteKeys.foregroundTclShortcut(event);
+        if (shortcut != null) {
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+                beforeAppLaunch(() -> RemoteKeys.launch(this, shortcut));
+            }
+            return true;
+        }
         if (!reordering) return super.dispatchKeyEvent(event);
         if (dockEditing) return dispatchDockEdit(event);
         boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
@@ -1270,6 +1273,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onTileFocused(int position, View card) {
+        if (topPresentation != null) topPresentation.setGridVisible(dockRow && position >= COLUMNS);
         if (header != null) header.setAlpha(!dockRow || position < COLUMNS ? 1f : 0f);
         ScenicBackdropDrawable.setLower(root, dockRow && position >= COLUMNS, animations && !reducedMotion);
         lastFocused = position;
@@ -1999,6 +2003,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         final int pos = adapter.focusablePosition(Math.max(0, Math.min(position, adapter.appCount() - 1)));
+        if (dockRow && pos >= COLUMNS && topPresentation != null) topPresentation.setGridVisible(true);
         RecyclerView.ViewHolder vh = grid.findViewHolderForAdapterPosition(pos);
         if (vh != null) {
             View card = vh.itemView.findViewById(R.id.card);
@@ -2280,7 +2285,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Hides the Inputs pill when it would have nothing to list: streaming boxes have no HDMI-in, AV or tuner. */
     private void updateInputsButton() {
-        boolean any = liveTvIntent() != null || !sourcePanelService.isEmpty();
+        boolean any = inputMenu.liveTvIntent() != null || inputMenu.hasSourcePanel();
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (!any && tim != null) {
             for (TvInputInfo info : tim.getTvInputList()) {
@@ -2294,32 +2299,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnInputs.setVisibility(any && topShown(TOP_INPUTS) ? View.VISIBLE : View.GONE);
     }
 
-    /** The Live TV app's launch intent: its leanback entry point, or the configured action if it has none. */
-    private Intent liveTvIntent() {
-        if (liveTvPkg.isEmpty()) return null;
-        Intent i = getPackageManager().getLeanbackLaunchIntentForPackage(liveTvPkg);
-        if (i != null || liveTvAction.isEmpty()) return i;
-        Intent byAction = new Intent(liveTvAction).setPackage(liveTvPkg);
-        return getPackageManager().resolveActivity(byAction, 0) != null ? byAction : null;
-    }
-
-    /** The TV's own source-selection panel, for TVs that have no TvInputManager (TCL Android TV 9): a
-     *  service, or an activity on sets whose panel is a dialog (BYINTEK U4's QuickSourceActivity). */
-    private void openSourcePanel() {
-        Intent i = new Intent(sourcePanelAction);
-        ComponentName c = ComponentName.unflattenFromString(sourcePanelService);
-        if (c != null) i.setComponent(c);
-        try {
-            if (getPackageManager().resolveActivity(i, 0) != null) {
-                startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                return;
-            }
-            startService(i);
-        } catch (Exception e) {
-            Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
-        }
-    }
-
     private void open(Intent i) {
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
@@ -2329,31 +2308,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
-    /** Switches to a passthrough input (HDMI, AV). The standard way is ACTION_VIEW on its channel URI,
-     *  which the Live TV app handles; where nothing takes that, the configured `input_action` is sent
-     *  with the same URI instead (XGIMI's HDMI player only answers com.xgimi.action.hdmiPlayer). */
-    private void openInput(String inputId) {
-        Uri uri = TvContract.buildChannelUriForPassthroughInput(inputId);
-        Intent view = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "vnd.android.cursor.item/channel")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        try {
-            startActivity(view);
-            return;
-        } catch (ActivityNotFoundException e) {
-            if (inputAction.isEmpty()) {
-                Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
-        open(new Intent(inputAction).setDataAndType(uri, "vnd.android.cursor.item/channel"));
-    }
-
     /** Dropdown menu under the Inputs pill: HDMI ports (with connection state), AV and Live TV. */
     private void showInputs() {
         // A configured source panel and no Live TV row to offer next to it: the panel is the whole menu.
         // The BYINTEK U4 needs this, as its TvInputManager lists three HDMI ports and an AV input it doesn't have.
-        if (!sourcePanelService.isEmpty() && liveTvIntent() == null) {
-            openSourcePanel();
+        if (inputMenu.hasSourcePanel() && inputMenu.liveTvIntent() == null) {
+            inputMenu.openSourcePanel();
             return;
         }
         View anchor = findViewById(R.id.btnInputs);
@@ -2364,122 +2324,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int width = Math.max(anchor.getWidth(), (int) (150 * density));
         final PopupWindow popup = glassPopup(panel, width);
 
-        TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
-        boolean sawNonHdmi = false;
-        String tunerId = null;
-        boolean tunerIsHw = false;
-        boolean tunerIsAnalog = false;
-        if (tim != null) {
-            List<TvInputInfo> inputs = new ArrayList<>(tim.getTvInputList());
-            // HDMI ports first in port order, then AV and the rest.
-            Collections.sort(inputs, (a, b) -> {
-                boolean ha = a.getType() == TvInputInfo.TYPE_HDMI, hb = b.getType() == TvInputInfo.TYPE_HDMI;
-                if (ha != hb) return ha ? -1 : 1;
-                return String.valueOf(a.loadLabel(this)).compareToIgnoreCase(String.valueOf(b.loadLabel(this)));
-            });
-            // An HDMI-CEC device (an Apple TV, a soundbar) gets an input of its own whose parent is the
-            // port it sits on, so the port and the device would each get a row (Vestel MT7332: "HDMI 1"
-            // and "HDMI Apple TV"). The device takes its port's row instead, and a bare port is listed
-            // only when nothing on it speaks CEC.
-            Set<String> inputIds = new HashSet<>();
-            for (TvInputInfo info : inputs) inputIds.add(info.getId());
-            Map<String, List<TvInputInfo>> cecDevices = new HashMap<>();
-            for (TvInputInfo info : inputs) {
-                String parent = info.getParentId();
-                if (parent == null || !inputIds.contains(parent)) continue;
-                if (!info.isPassthroughInput() || info.isHidden(this)) continue;
-                List<TvInputInfo> onPort = cecDevices.get(parent);
-                if (onPort == null) cecDevices.put(parent, onPort = new ArrayList<>());
-                onPort.add(info);
-            }
-            // Some TVs (Sony) report every HDMI port as connected whether or not anything is plugged in,
-            // so drop the HDMI status then. A TV with every port really in use loses it too.
-            int hdmiPorts = 0, hdmiConnected = 0;
-            for (TvInputInfo info : inputs) {
-                if (!info.isPassthroughInput() || info.getType() != TvInputInfo.TYPE_HDMI) continue;
-                if (info.getParentId() != null && inputIds.contains(info.getParentId())) continue;
-                hdmiPorts++;
-                if (tim.getInputState(info.getId()) == TvInputManager.INPUT_STATE_CONNECTED) hdmiConnected++;
-            }
-            boolean hdmiStateBogus = hdmiPorts > 1 && hdmiConnected == hdmiPorts;
-            for (TvInputInfo info : inputs) {
-                if (info.getType() == TvInputInfo.TYPE_TUNER
-                        && (info.getServiceInfo().applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) {
-                    // Prefer a hardware tuner: the framework names those ".../HW<n>". System apps such as
-                    // AirPlay also register software inputs of type TUNER and may sort first (seen on TCL G05).
-                    // Among tuners of the same kind, skip an analog input when another is present.
-                    // MediaTek names them AnalogInputService and TunerInputService; alphabetical order
-                    // would pick the analog one, and Live TV then opens a dead ATV source.
-                    boolean hw = info.getId().matches(".*/HW\\d+$");
-                    boolean analog = info.getId().toLowerCase(Locale.ROOT).contains("analog");
-                    boolean better = tunerId == null
-                            || (hw && !tunerIsHw)
-                            || (hw == tunerIsHw && tunerIsAnalog && !analog)
-                            || (hw == tunerIsHw && analog == tunerIsAnalog
-                                    && info.getId().compareTo(tunerId) < 0);
-                    if (better) {
-                        tunerId = info.getId();
-                        tunerIsHw = hw;
-                        tunerIsAnalog = analog;
-                    }
-                }
-                // Inputs hidden in the TV's Settings > Inputs stay out of the menu too.
-                if (!info.isPassthroughInput() || info.isHidden(this)) continue;
-                // A CEC device's row is added with its port, below.
-                if (info.getParentId() != null && inputIds.contains(info.getParentId())) continue;
-                CharSequence l = info.loadLabel(this);
-                String label = l == null ? info.getId() : l.toString();
-                boolean hdmi = info.getType() == TvInputInfo.TYPE_HDMI;
-                if (hdmi && !label.toUpperCase(Locale.ROOT).contains("HDMI")) label = "HDMI " + label;
-                CharSequence custom = info.loadCustomLabel(this);
-                boolean named = custom != null && custom.length() > 0 && !custom.toString().equals(label);
-                if (!hdmi && rows.getChildCount() > 0 && !sawNonHdmi) addSeparator(rows);
-                if (!hdmi) sawNonHdmi = true;
-                List<TvInputInfo> devices = cecDevices.get(info.getId());
-                if (devices != null) {
-                    // "Apple TV · HDMI 1": the device's own name (or the one given to it or to its port in
-                    // Settings > Inputs), then the port. Opening the device's input also makes it the CEC
-                    // active source, which wakes it.
-                    for (TvInputInfo device : devices) {
-                        CharSequence name = device.loadCustomLabel(this);
-                        if (name == null || name.length() == 0) name = named ? custom : device.loadLabel(this);
-                        String deviceLabel = name == null || name.length() == 0 ? label : name + " \u00B7 " + label;
-                        final String deviceId = device.getId();
-                        int state = hdmiStateBogus ? -1 : tim.getInputState(deviceId);
-                        addInputRow(rows, popup, R.drawable.ic_input, deviceLabel, state, () -> openInput(deviceId));
-                    }
-                    continue;
-                }
-                // The name given in Settings > Inputs (e.g. "MacBook Pro") goes first, the port after it.
-                if (named) label = custom + " \u00B7 " + label;
-                final String id = info.getId();
-                int state = hdmi && hdmiStateBogus ? -1 : tim.getInputState(id);
-                addInputRow(rows, popup, hdmi ? R.drawable.ic_input : R.drawable.ic_av, label, state,
-                        () -> openInput(id));
-            }
-        }
-        // Nothing to list where there is no TvInputManager: the TV's own source panel switches inputs.
-        if (rows.getChildCount() == 0 && !sourcePanelService.isEmpty()) {
-            addInputRow(rows, popup, R.drawable.ic_input, getString(R.string.inputs), -1, this::openSourcePanel);
-        }
-        Intent liveTv = liveTvIntent();
-        if (liveTv != null && tunerId != null) {
-            // Tune that input only when the Live TV package itself handles the URI.
-            // The unrestricted input player also resolves it (that is how HDMI opens), but on the
-            // AIWA AI PONT SA that player stays black, and the Live TV package does not handle the
-            // URI at all, which used to toast "Not available on this TV". Keep the leanback activity
-            // then: it is the same path as the Live TV tile. Do not drop the package restriction.
-            Intent tuned = new Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(TvContract.buildChannelUriForPassthroughInput(tunerId),
-                            "vnd.android.cursor.item/channel")
-                    .setPackage(liveTvPkg);
-            if (tuned.resolveActivity(getPackageManager()) != null) liveTv = tuned;
-        }
-        if (liveTv != null) {
-            if (rows.getChildCount() > 0) addSeparator(rows);
-            final Intent liveTvIntent = liveTv;
-            addInputRow(rows, popup, R.drawable.ic_livetv, getString(R.string.live_tv), -1, () -> open(liveTvIntent));
-        }
+        inputMenu.populate(rows, popup::dismiss);
         if (rows.getChildCount() == 0) {
             Toast.makeText(this, R.string.no_inputs, Toast.LENGTH_SHORT).show();
             return;
@@ -2500,8 +2345,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             View next = findViewById(left ? R.id.btnReorder : R.id.btnSettings);
             if (left && next.getVisibility() != View.VISIBLE) next = findViewById(R.id.btnMute);
             if (next == null || next.getVisibility() != View.VISIBLE) return true;
-            TvFocusMotion.noteKey(event);   // the popup's keys skip dispatchKeyEvent: note them for the lean and tick
-            navSound.noteKey();
+            TvFocusMotion.noteKey(event);   // the popup's keys skip dispatchKeyEvent: note them for the lean
             popup.dismiss();
             next.requestFocus();
             return true;
@@ -2513,10 +2357,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         rows.getChildAt(0).requestFocus();
     }
 
-    /**
-     * Settings menu, Sounds: the navigation sound, the app-open sound, and All sounds for both at once. Each row
-     * shows On or Off; OK flips it and the menu stays open on that row. The bell follows.
-     */
+    /** Settings menu for the optional app-open sound. */
     private void showSoundsMenu(int focusRow) {
         showSoundsMenu(focusRow, findViewById(R.id.btnSettings));
     }
@@ -2526,22 +2367,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (260 * density));
-        int[] titles = {R.string.sound_all, R.string.sound_navigation, R.string.sound_open};
-        boolean[] on = {!navSound.isMuted(), navSound.tickOn(), navSound.popOn()};
-        for (int i = 0; i < titles.length; i++) {
-            final int row = i;
-            View r = addSettingsMenuRow(rows, popup, getString(titles[i]), () -> {
-                if (row == 0) navSound.setMuted(!navSound.isMuted());
-                else if (row == 1) navSound.setTick(!navSound.tickOn());
-                else navSound.setPop(!navSound.popOn());
-                TextView bell = findViewById(R.id.btnMute);
-                if (bell != null) showMuted(bell, navSound.isMuted());
-                showSoundsMenu(row, anchor);
-            });
-            TextView status = r.findViewById(R.id.status);
-            status.setText(on[i] ? R.string.sound_on : R.string.sound_off);
-            status.setVisibility(View.VISIBLE);
-        }
+        View row = addSettingsMenuRow(rows, popup, getString(R.string.sound_open), () -> {
+            navSound.setMuted(!navSound.isMuted());
+            TextView bell = findViewById(R.id.btnMute);
+            if (bell != null) showMuted(bell, navSound.isMuted());
+            showSoundsMenu(0, anchor);
+        });
+        TextView status = row.findViewById(R.id.status);
+        status.setText(navSound.isMuted() ? R.string.sound_off : R.string.sound_on);
+        status.setVisibility(View.VISIBLE);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (260 * density), panel.getMeasuredWidth()));
         dropIn(popup, panel, anchor, Gravity.END);
@@ -2740,40 +2574,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         popup.showAsDropDown(anchor, 0, (int) (10 * density), gravity);
         panel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(220)
                 .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
-    }
-
-    private void addSeparator(LinearLayout rows) {
-        View line = new View(this);
-        line.setBackgroundColor(0x1FFFFFFF);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) density);
-        int m = (int) (6 * density), h = (int) (12 * density);
-        lp.setMargins(h, m, h, m);
-        rows.addView(line, lp);
-    }
-
-    private void addInputRow(LinearLayout rows, PopupWindow popup, int iconRes, String title, int state, Runnable action) {
-        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
-        ((ImageView) row.findViewById(R.id.icon)).setImageResource(iconRes);
-        ((TextView) row.findViewById(R.id.title)).setText(title);
-        TextView status = row.findViewById(R.id.status);
-        View dot = row.findViewById(R.id.dot);
-        // This TV reports "standby" for every port whether or not something is plugged in, so only
-        // definite states are shown.
-        if (state == TvInputManager.INPUT_STATE_CONNECTED) {
-            status.setText(R.string.connected);
-            dot.setVisibility(View.VISIBLE);
-        } else if (state == TvInputManager.INPUT_STATE_DISCONNECTED) {
-            status.setText(R.string.not_connected);
-            dot.setVisibility(View.GONE);
-        } else {
-            status.setVisibility(View.GONE);
-            dot.setVisibility(View.GONE);
-        }
-        row.setOnClickListener(v -> {
-            popup.dismiss();
-            action.run();
-        });
-        rows.addView(row);
     }
 
     // ---- launcher settings and module cards -------------------------------------------------------

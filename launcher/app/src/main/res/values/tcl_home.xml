@@ -28,7 +28,7 @@
     <string name="control_home">Inicio</string>
     <string name="control_customize">Personalizar</string>
     <string name="home_surface_title">Inicio</string>
-    <string name="prototype_name" translatable="false">TCL Home · Prueba</string>
+    <string name="prototype_name" translatable="false">Lumen TV</string>
     <string-array name="settings_fallback_components" translatable="false">
         <item>com.tcl.settings/com.tcl.settings.ui.MainActivity</item>
         <item>com.xiaomi.mitv.settings/com.xiaomi.mitv.settings.entry.MainActivity</item>

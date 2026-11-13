@@ -81,3 +81,7 @@ El resolver debe nombrar `com.google.android.apps.tv.launcherx/.home.HomeActivit
 5. Ante pantalla negra persistente, arranque distinto o pérdida de acceso: regresar a Google TV con la ruta comprobada y guardar el fallo. No añadir un relanzador automático para ocultarlo.
 
 No se declara estabilidad diaria por pasar esta lista una vez. Se requiere uso real posterior sin bloquear recuperación ni servicios nativos.
+
+## Ensayo del selector en la TCL G08/AU02 · 03/11/2026
+
+El usuario seleccionó TCL Home en el selector oficial y reportó que Home físico seguía abriendo Google TV. La lectura ADB confirmó para el usuario 0 el titular pe.tclhome.prototype, mientras que el resolver HOME devolvió com.google.android.apps.tv.launcherx/.home.HomeActivity con prioridad 2. La actividad visible al muestrear era MainActivity de TCL Home, lo que no demuestra qué abre la tecla física. Se detuvo el ensayo sin escrituras ADB. Queda pendiente autorizar la reversión del rol al titular original.
